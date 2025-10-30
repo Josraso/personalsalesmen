@@ -506,6 +506,7 @@ class PersonalSalesmen extends Module
      */
     public function hookActionCustomerGridQueryBuilderModifier(array $params): void
     {
+        error_log('PSM DEBUG: hookActionCustomerGridQueryBuilderModifier EJECUTADO');
         $this->applyAccessRestriction($params['search_query_builder'], 'c', 'id_customer');
     }
 
@@ -514,22 +515,32 @@ class PersonalSalesmen extends Module
      */
     public function hookActionOrderGridQueryBuilderModifier(array $params): void
     {
+        error_log('PSM DEBUG: hookActionOrderGridQueryBuilderModifier EJECUTADO');
+
         $accessControl = $this->getAccessControl();
 
-        if ($accessControl->canSeeEverything()) {
+        $canSeeEverything = $accessControl->canSeeEverything();
+        error_log('PSM DEBUG: canSeeEverything = ' . ($canSeeEverything ? 'TRUE' : 'FALSE'));
+
+        if ($canSeeEverything) {
+            error_log('PSM DEBUG: Employee can see everything, NO FILTER APPLIED');
             return;
         }
 
         $allowedIds = $accessControl->getAllowedCustomerIds();
+        error_log('PSM DEBUG: allowedIds count = ' . count($allowedIds) . ' IDs: ' . implode(',', $allowedIds));
 
         if (empty($allowedIds)) {
+            error_log('PSM DEBUG: NO allowed IDs, setting 1=0');
             $params['search_query_builder']->andWhere('1 = 0');
             return;
         }
 
+        $filter = 'o.id_customer IN (' . implode(',', array_map('intval', $allowedIds)) . ')';
+        error_log('PSM DEBUG: Applying filter: ' . $filter);
+
         // Usar o.id_customer directamente sin JOIN (evita conflicto de alias)
-        $params['search_query_builder']
-            ->andWhere('o.id_customer IN (' . implode(',', array_map('intval', $allowedIds)) . ')');
+        $params['search_query_builder']->andWhere($filter);
     }
 
     /**
@@ -537,6 +548,7 @@ class PersonalSalesmen extends Module
      */
     public function hookActionAddressGridQueryBuilderModifier(array $params): void
     {
+        error_log('PSM DEBUG: hookActionAddressGridQueryBuilderModifier EJECUTADO');
         $this->applyAccessRestriction($params['search_query_builder'], 'a', 'id_customer');
     }
 
@@ -652,22 +664,34 @@ class PersonalSalesmen extends Module
      */
     private function applyAccessRestriction($queryBuilder, string $alias, string $field): void
     {
+        error_log("PSM DEBUG: applyAccessRestriction called for {$alias}.{$field}");
+
         $accessControl = $this->getAccessControl();
 
-        if ($accessControl->canSeeEverything()) {
+        $empId = $this->context->employee->id ?? 0;
+        $profId = $this->context->employee->id_profile ?? 0;
+        error_log("PSM DEBUG: Employee ID={$empId}, Profile ID={$profId}");
+
+        $canSeeEverything = $accessControl->canSeeEverything();
+        error_log("PSM DEBUG: canSeeEverything = " . ($canSeeEverything ? 'TRUE' : 'FALSE'));
+
+        if ($canSeeEverything) {
+            error_log("PSM DEBUG: NO FILTER - Employee can see everything");
             return;
         }
 
         $allowedIds = $accessControl->getAllowedCustomerIds();
+        error_log("PSM DEBUG: Allowed IDs count = " . count($allowedIds) . ", IDs: " . implode(',', array_slice($allowedIds, 0, 20)));
 
         if (empty($allowedIds)) {
+            error_log("PSM DEBUG: EMPTY allowed IDs - Setting 1=0");
             $queryBuilder->andWhere('1 = 0');
             return;
         }
 
-        $queryBuilder->andWhere(
-            $alias . '.' . $field . ' IN (' . implode(',', array_map('intval', $allowedIds)) . ')'
-        );
+        $filter = $alias . '.' . $field . ' IN (' . implode(',', array_map('intval', $allowedIds)) . ')';
+        error_log("PSM DEBUG: Applying filter: {$filter}");
+        $queryBuilder->andWhere($filter);
     }
 
     /**

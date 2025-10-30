@@ -121,7 +121,13 @@ class AssignmentRepository
             'psa_group.id_employee = ' . (int)$idEmployee . ')'
         );
 
+        $fullQuery = $sql->build();
+        error_log("PSM DEBUG Repository: getCustomerIdsByEmployee({$idEmployee}) SQL: {$fullQuery}");
+
         $results = Db::getInstance()->executeS($sql);
+        $count = $results ? count($results) : 0;
+        error_log("PSM DEBUG Repository: getCustomerIdsByEmployee({$idEmployee}) returned {$count} customers");
+
         return $results ? array_column($results, 'id_customer') : [];
     }
 

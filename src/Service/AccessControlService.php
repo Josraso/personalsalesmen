@@ -35,7 +35,11 @@ class AccessControlService
     public function canSeeEverything(): bool
     {
         // SuperAdmin (profile_id = 1) o restricci�n desactivada
-        return $this->profileId === 1 || !$this->restrictionEnabled;
+        $result = $this->profileId === 1 || !$this->restrictionEnabled;
+
+        error_log("PSM DEBUG AccessControl: canSeeEverything() - Employee ID={$this->employeeId}, Profile ID={$this->profileId}, Restriction Enabled={$this->restrictionEnabled}, Result={$result}");
+
+        return $result;
     }
 
     /**
@@ -53,16 +57,20 @@ class AccessControlService
     public function getAllowedCustomerIds(): array
     {
         if ($this->canSeeEverything()) {
+            error_log("PSM DEBUG AccessControl: getAllowedCustomerIds() - Can see everything, returning empty array");
             return []; // Array vac�o significa sin restricci�n
         }
 
         // Usar cach� para la misma request
         if ($this->allowedCustomerIds !== null) {
+            error_log("PSM DEBUG AccessControl: getAllowedCustomerIds() - Using cache, count=" . count($this->allowedCustomerIds));
             return $this->allowedCustomerIds;
         }
 
         $this->allowedCustomerIds = $this->repository->getCustomerIdsByEmployee($this->employeeId);
-        
+
+        error_log("PSM DEBUG AccessControl: getAllowedCustomerIds() - Fresh query for employee {$this->employeeId}, found " . count($this->allowedCustomerIds) . " customers");
+
         return $this->allowedCustomerIds;
     }
 
