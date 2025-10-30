@@ -112,12 +112,14 @@ class AdminPersonalSalesmenController extends ModuleAdminController
             return;
         }
 
+        // Si NO es SuperAdmin, mostrar vista para empleados
         if (!$this->accessControl->canManageAssignments()) {
-            $this->content = $this->displayError($this->l('You do not have permission to manage assignments. Only SuperAdmin can access this page.'));
+            $this->content = $this->renderEmployeeView();
             parent::initContent();
             return;
         }
 
+        // Vista SuperAdmin: Gestión completa
         $this->content = $this->renderStatistics();
         $this->content .= $this->renderCreateForm();
         $this->content .= $this->renderAssignmentsList();
@@ -385,6 +387,110 @@ class AdminPersonalSalesmenController extends ModuleAdminController
             $html .= '</table>';
         }
 
+        $html .= '</div>';
+
+        return $html;
+    }
+
+    /**
+     * Render employee view (for non-SuperAdmin employees)
+     */
+    private function renderEmployeeView()
+    {
+        $employee = $this->context->employee;
+        $repository = new AssignmentRepository();
+        $assignments = $repository->findByEmployee((int)$employee->id);
+        $allowedCustomerIds = $this->accessControl->getAllowedCustomerIds();
+
+        $html = '<div class="panel">';
+        $html .= '<div class="panel-heading">';
+        $html .= '<i class="icon-user"></i> ' . $this->l('My Assignments');
+        $html .= '</div>';
+        $html .= '<div class="panel-body">';
+
+        // Info del empleado
+        $html .= '<div class="alert alert-info">';
+        $html .= '<h4>' . $this->l('Welcome') . ', ' . htmlspecialchars($employee->firstname . ' ' . $employee->lastname) . '</h4>';
+        $html .= '<p>' . $this->l('This page shows your customer assignments and access restrictions.') . '</p>';
+        $html .= '</div>';
+
+        // Estadísticas personales
+        $html .= '<div class="row" style="margin-bottom: 20px;">';
+
+        $html .= '<div class="col-lg-4">';
+        $html .= '<div class="panel" style="text-align: center; background: #e3f2fd;">';
+        $html .= '<div class="panel-body">';
+        $html .= '<h2 style="margin: 0; color: #1976d2;">' . count($assignments) . '</h2>';
+        $html .= '<p style="margin: 5px 0 0 0;"><strong>' . $this->l('Total Assignments') . '</strong></p>';
+        $html .= '</div></div></div>';
+
+        $html .= '<div class="col-lg-4">';
+        $html .= '<div class="panel" style="text-align: center; background: #e8f5e9;">';
+        $html .= '<div class="panel-body">';
+        $html .= '<h2 style="margin: 0; color: #388e3c;">' . count($allowedCustomerIds) . '</h2>';
+        $html .= '<p style="margin: 5px 0 0 0;"><strong>' . $this->l('Allowed Customers') . '</strong></p>';
+        $html .= '</div></div></div>';
+
+        $html .= '<div class="col-lg-4">';
+        $html .= '<div class="panel" style="text-align: center; background: ' . (count($allowedCustomerIds) > 0 ? '#e8f5e9' : '#ffebee') . ';">';
+        $html .= '<div class="panel-body">';
+        $restrictionStatus = $this->accessControl->hasRestrictions() ? $this->l('Active') : $this->l('Inactive');
+        $html .= '<h3 style="margin: 0; color: ' . (count($allowedCustomerIds) > 0 ? '#388e3c' : '#c62828') . ';">' . $restrictionStatus . '</h3>';
+        $html .= '<p style="margin: 5px 0 0 0;"><strong>' . $this->l('Restriction Status') . '</strong></p>';
+        $html .= '</div></div></div>';
+
+        $html .= '</div>';
+
+        // Lista de asignaciones
+        if (!empty($assignments)) {
+            $html .= '<h4>' . $this->l('Your Assignments') . '</h4>';
+            $html .= '<table class="table">';
+            $html .= '<thead>';
+            $html .= '<tr>';
+            $html .= '<th>' . $this->l('Type') . '</th>';
+            $html .= '<th>' . $this->l('Name') . '</th>';
+            $html .= '<th>' . $this->l('Date Added') . '</th>';
+            $html .= '<th>' . $this->l('Status') . '</th>';
+            $html .= '</tr>';
+            $html .= '</thead>';
+            $html .= '<tbody>';
+
+            foreach ($assignments as $assignment) {
+                $html .= '<tr>';
+
+                if ($assignment['id_customer']) {
+                    $customer = new Customer($assignment['id_customer']);
+                    $html .= '<td><span class="badge badge-info">' . $this->l('Customer') . '</span></td>';
+                    $html .= '<td>' . htmlspecialchars($customer->firstname . ' ' . $customer->lastname) . ' (ID: ' . $assignment['id_customer'] . ')</td>';
+                } elseif ($assignment['id_group']) {
+                    $group = new Group($assignment['id_group']);
+                    $html .= '<td><span class="badge badge-warning">' . $this->l('Group') . '</span></td>';
+                    $html .= '<td>' . htmlspecialchars($group->name[1]) . ' (ID: ' . $assignment['id_group'] . ')</td>';
+                }
+
+                $html .= '<td>' . date('Y-m-d H:i', strtotime($assignment['date_add'])) . '</td>';
+                $html .= '<td>' . ($assignment['active'] ? '<span class="badge badge-success">' . $this->l('Active') . '</span>' : '<span class="badge badge-danger">' . $this->l('Inactive') . '</span>') . '</td>';
+                $html .= '</tr>';
+            }
+
+            $html .= '</tbody>';
+            $html .= '</table>';
+        } else {
+            $html .= '<div class="alert alert-warning">';
+            $html .= '<h4><i class="icon-warning-sign"></i> ' . $this->l('No Assignments') . '</h4>';
+            $html .= '<p>' . $this->l('You don\'t have any customer assignments yet. Contact your administrator to get access to customers.') . '</p>';
+            $html .= '</div>';
+        }
+
+        // Botón de Debug
+        $html .= '<div style="margin-top: 20px;">';
+        $html .= '<a href="' . self::$currentIndex . '&viewDebug=1&token=' . $this->token . '" class="btn btn-primary">';
+        $html .= '<i class="icon-bug"></i> ' . $this->l('View Debug Info');
+        $html .= '</a>';
+        $html .= '<p class="help-block">' . $this->l('Use the debug tool if you\'re seeing customers you shouldn\'t have access to.') . '</p>';
+        $html .= '</div>';
+
+        $html .= '</div>';
         $html .= '</div>';
 
         return $html;
