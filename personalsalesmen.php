@@ -74,6 +74,9 @@ class PersonalSalesmen extends Module
             && $this->registerHook('actionOrderGridQueryBuilderModifier')
             && $this->registerHook('actionAddressGridQueryBuilderModifier')
             && $this->registerHook('actionValidateOrder')
+            && $this->registerHook('actionObjectCustomerAddAfter')
+            && $this->registerHook('actionCustomerThreadsGridQueryBuilderModifier')
+            && $this->registerHook('displayAdminCustomersAddressesItemAction')
             && $this->installTab();
     }
 
@@ -217,33 +220,113 @@ class PersonalSalesmen extends Module
 
     /**
      * Hook: Bloquear acceso directo a recursos no permitidos
+     * Intercepta accesos desde campanita, URLs directas, etc.
+     * También inyecta JavaScript para filtrar grupos de clientes
      */
     public function hookActionAdminControllerSetMedia(): void
     {
         $accessControl = $this->getAccessControl();
         $controller = $this->context->controller->controller_name ?? '';
-        $protectedControllers = ['AdminOrders', 'AdminCustomers', 'AdminAddresses'];
 
-        if (!in_array($controller, $protectedControllers) || $accessControl->canSeeEverything()) {
+        // SuperAdmin puede acceder a todo - no aplicar restricciones
+        if (!$accessControl->canSeeEverything()) {
+            // Inyectar JavaScript para filtrar grupos en formulario de clientes
+            if ($controller === 'AdminCustomers') {
+                $this->injectGroupFilterScript($accessControl);
+            }
+
+            // Controladores protegidos y sus parámetros de ID
+            $protectedControllers = [
+                'AdminCustomers' => 'id_customer',
+                'AdminOrders' => 'id_order',
+                'AdminAddresses' => 'id_address',
+                'AdminCustomerThreads' => 'id_customer_thread',
+            ];
+
+            if (isset($protectedControllers[$controller])) {
+                $idParam = $protectedControllers[$controller];
+                $resourceId = (int)Tools::getValue($idParam);
+
+                // También verificar vieworder, viewcustomer, etc.
+                $isViewing = Tools::getValue('view' . strtolower(str_replace('Admin', '', $controller)))
+                             || Tools::getValue('update' . strtolower(str_replace('Admin', '', $controller)));
+
+                if ($resourceId > 0 || $isViewing) {
+                    if ($resourceId === 0) {
+                        $resourceId = (int)Tools::getValue('id_' . strtolower(str_replace('Admin', '', $controller)));
+                    }
+
+                    $customerId = $this->getCustomerIdFromResource($controller, $resourceId);
+
+                    if ($customerId && !$accessControl->canAccessCustomer($customerId)) {
+                        $this->context->controller->errors[] = $this->trans(
+                            'Access denied. You do not have permission to view this resource.',
+                            [],
+                            'Modules.Personalsalesmen.Admin'
+                        );
+
+                        // Redirigir al listado correspondiente
+                        $redirectController = $controller;
+                        if ($controller === 'AdminCustomerThreads') {
+                            $redirectController = 'AdminCustomerService';
+                        }
+
+                        Tools::redirectAdmin($this->context->link->getAdminLink($redirectController));
+                        exit;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Inyectar JavaScript para filtrar grupos de clientes
+     */
+    private function injectGroupFilterScript(AccessControlService $accessControl): void
+    {
+        $allowedGroupIds = $accessControl->getAllowedGroupIds();
+        $hasOnlyGroupAssignments = $accessControl->hasOnlyGroupAssignments();
+
+        // Si no tiene asignaciones de grupo, no filtrar (puede usar cualquier grupo o ninguno)
+        if (empty($allowedGroupIds)) {
             return;
         }
 
-        // Obtener ID del recurso
-        $idParam = 'id_' . strtolower(str_replace('Admin', '', $controller));
-        $resourceId = (int)Tools::getValue($idParam);
+        // Crear array JavaScript con IDs permitidos
+        $allowedGroupsJson = json_encode(array_map('intval', $allowedGroupIds));
 
-        if ($resourceId > 0) {
-            $customerId = $this->getCustomerIdFromResource($controller, $resourceId);
+        $script = "
+        <script>
+        (function() {
+            document.addEventListener('DOMContentLoaded', function() {
+                var allowedGroupIds = {$allowedGroupsJson};
+                var hasOnlyGroupAssignments = " . ($hasOnlyGroupAssignments ? 'true' : 'false') . ";
 
-            if ($customerId && !$accessControl->canAccessCustomer($customerId)) {
-                $this->context->controller->errors[] = $this->trans(
-                    'You do not have permission to access this resource.',
-                    [],
-                    'Modules.Personalsalesmen.Admin'
-                );
-                Tools::redirectAdmin($this->context->link->getAdminLink($controller));
-            }
-        }
+                // Buscar todos los checkboxes de grupos
+                var groupCheckboxes = document.querySelectorAll('input[name=\"groupBox[]\"]');
+
+                groupCheckboxes.forEach(function(checkbox) {
+                    var groupId = parseInt(checkbox.value);
+
+                    if (!allowedGroupIds.includes(groupId)) {
+                        // Ocultar y deshabilitar grupos no permitidos
+                        var row = checkbox.closest('tr');
+                        if (row) {
+                            row.style.display = 'none';
+                        }
+                        checkbox.disabled = true;
+                        checkbox.checked = false;
+                    } else if (hasOnlyGroupAssignments) {
+                        // Si solo tiene asignaciones por grupo, pre-seleccionar sus grupos
+                        checkbox.checked = true;
+                    }
+                });
+            });
+        })();
+        </script>
+        ";
+
+        echo $script;
     }
 
     /**
@@ -305,6 +388,52 @@ class PersonalSalesmen extends Module
     }
 
     /**
+     * Hook: Auto-asignar cliente creado por empleado restringido
+     */
+    public function hookActionObjectCustomerAddAfter(array $params): void
+    {
+        $accessControl = $this->getAccessControl();
+
+        // Solo auto-asignar si es un empleado con restricciones (no SuperAdmin)
+        if ($accessControl->canSeeEverything()) {
+            return;
+        }
+
+        $customer = $params['object'];
+        if (!Validate::isLoadedObject($customer)) {
+            return;
+        }
+
+        $employeeId = (int)$this->context->employee->id;
+
+        // Crear asignación automática
+        $this->assignmentService->createAssignment($employeeId, (int)$customer->id, null);
+    }
+
+    /**
+     * Hook: Filtrar grid de Customer Threads (Servicio al Cliente)
+     */
+    public function hookActionCustomerThreadsGridQueryBuilderModifier(array $params): void
+    {
+        $accessControl = $this->getAccessControl();
+
+        if ($accessControl->canSeeEverything()) {
+            return;
+        }
+
+        $allowedIds = $accessControl->getAllowedCustomerIds();
+
+        if (empty($allowedIds)) {
+            $params['search_query_builder']->andWhere('1 = 0');
+            return;
+        }
+
+        // Filtrar por id_customer en customer_thread
+        $params['search_query_builder']
+            ->andWhere('ct.id_customer IN (' . implode(',', array_map('intval', $allowedIds)) . ')');
+    }
+
+    /**
      * Aplicar restricción de acceso a query builder
      */
     private function applyAccessRestriction($queryBuilder, string $alias, string $field): void
@@ -335,15 +464,24 @@ class PersonalSalesmen extends Module
         switch ($controller) {
             case 'AdminCustomers':
                 return $resourceId;
-            
+
             case 'AdminOrders':
                 $order = new Order($resourceId);
                 return $order->id_customer ?: null;
-            
+
             case 'AdminAddresses':
                 $address = new Address($resourceId);
                 return $address->id_customer ?: null;
-            
+
+            case 'AdminCustomerThreads':
+                // Obtener id_customer desde customer_thread
+                $sql = new DbQuery();
+                $sql->select('id_customer');
+                $sql->from('customer_thread');
+                $sql->where('id_customer_thread = ' . (int)$resourceId);
+                $customerId = Db::getInstance()->getValue($sql);
+                return $customerId ? (int)$customerId : null;
+
             default:
                 return null;
         }

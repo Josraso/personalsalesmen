@@ -100,14 +100,14 @@ class AssignmentRepository
         $sql = new DbQuery();
         $sql->select('DISTINCT c.id_customer');
         $sql->from('customer', 'c');
-        
+
         // Asignaciones directas
         $sql->leftJoin(
             'personalsalesmen_assignment',
             'psa_customer',
             'psa_customer.id_customer = c.id_customer AND psa_customer.active = 1'
         );
-        
+
         // Asignaciones por grupo
         $sql->leftJoin('customer_group', 'cg', 'cg.id_customer = c.id_customer');
         $sql->leftJoin(
@@ -115,7 +115,7 @@ class AssignmentRepository
             'psa_group',
             'psa_group.id_group = cg.id_group AND psa_group.active = 1'
         );
-        
+
         $sql->where(
             '(psa_customer.id_employee = ' . (int)$idEmployee . ' OR ' .
             'psa_group.id_employee = ' . (int)$idEmployee . ')'
@@ -123,6 +123,22 @@ class AssignmentRepository
 
         $results = Db::getInstance()->executeS($sql);
         return $results ? array_column($results, 'id_customer') : [];
+    }
+
+    /**
+     * Obtener IDs de grupos asignados a un empleado
+     */
+    public function getGroupIdsByEmployee(int $idEmployee): array
+    {
+        $sql = new DbQuery();
+        $sql->select('DISTINCT id_group');
+        $sql->from('personalsalesmen_assignment');
+        $sql->where('id_employee = ' . (int)$idEmployee);
+        $sql->where('id_group IS NOT NULL');
+        $sql->where('active = 1');
+
+        $results = Db::getInstance()->executeS($sql);
+        return $results ? array_column($results, 'id_group') : [];
     }
 
     /**

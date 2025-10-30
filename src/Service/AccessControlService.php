@@ -34,7 +34,7 @@ class AccessControlService
      */
     public function canSeeEverything(): bool
     {
-        // SuperAdmin (profile_id = 1) o restricción desactivada
+        // SuperAdmin (profile_id = 1) o restricciï¿½n desactivada
         return $this->profileId === 1 || !$this->restrictionEnabled;
     }
 
@@ -48,15 +48,15 @@ class AccessControlService
 
     /**
      * Obtener IDs de clientes que el empleado puede ver
-     * Usa caché para evitar queries repetitivas
+     * Usa cachï¿½ para evitar queries repetitivas
      */
     public function getAllowedCustomerIds(): array
     {
         if ($this->canSeeEverything()) {
-            return []; // Array vacío significa sin restricción
+            return []; // Array vacï¿½o significa sin restricciï¿½n
         }
 
-        // Usar caché para la misma request
+        // Usar cachï¿½ para la misma request
         if ($this->allowedCustomerIds !== null) {
             return $this->allowedCustomerIds;
         }
@@ -67,7 +67,7 @@ class AccessControlService
     }
 
     /**
-     * Verificar si el empleado puede acceder a un cliente específico
+     * Verificar si el empleado puede acceder a un cliente especï¿½fico
      */
     public function canAccessCustomer(int $customerId): bool
     {
@@ -77,6 +77,39 @@ class AccessControlService
 
         $allowedIds = $this->getAllowedCustomerIds();
         return in_array($customerId, $allowedIds, true);
+    }
+
+    /**
+     * Obtener IDs de grupos asignados al empleado
+     */
+    public function getAllowedGroupIds(): array
+    {
+        if ($this->canSeeEverything()) {
+            return []; // Array vacÃ­o = sin restricciÃ³n
+        }
+
+        return $this->repository->getGroupIdsByEmployee($this->employeeId);
+    }
+
+    /**
+     * Verificar si el empleado tiene asignaciones solo por grupo
+     * (no tiene asignaciones individuales de clientes)
+     */
+    public function hasOnlyGroupAssignments(): bool
+    {
+        if ($this->canSeeEverything()) {
+            return false;
+        }
+
+        $assignments = $this->repository->findByEmployee($this->employeeId);
+
+        foreach ($assignments as $assignment) {
+            if ($assignment['id_customer'] !== null) {
+                return false; // Tiene al menos una asignaciÃ³n individual
+            }
+        }
+
+        return !empty($assignments); // Solo tiene asignaciones de grupo
     }
 
     /**
@@ -94,13 +127,13 @@ class AccessControlService
     public function getSQLFilter(string $tableAlias = 'c', string $customerField = 'id_customer'): string
     {
         if ($this->canSeeEverything()) {
-            return '1=1'; // Sin restricción
+            return '1=1'; // Sin restricciï¿½n
         }
 
         $allowedIds = $this->getAllowedCustomerIds();
 
         if (empty($allowedIds)) {
-            return '1=0'; // Sin acceso a ningún cliente
+            return '1=0'; // Sin acceso a ningï¿½n cliente
         }
 
         $ids = implode(',', array_map('intval', $allowedIds));
@@ -108,7 +141,7 @@ class AccessControlService
     }
 
     /**
-     * Limpiar caché
+     * Limpiar cachï¿½
      */
     public function clearCache(): void
     {
@@ -116,7 +149,7 @@ class AccessControlService
     }
 
     /**
-     * Obtener información del empleado actual
+     * Obtener informaciï¿½n del empleado actual
      */
     public function getCurrentEmployeeInfo(): array
     {
