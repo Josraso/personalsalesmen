@@ -1,0 +1,26 @@
+{
+    "name": "prestashop/personalsalesmen",
+    "description": "Personal Salesmen Module for PrestaShop 8 & 9 - Assign customers and groups to specific employees",
+    "type": "prestashop-module",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Community",
+            "email": "community@prestashop.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.2.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "PrestaShop\\Module\\PersonalSalesmen\\": "src/"
+        }
+    },
+    "config": {
+        "preferred-install": "dist",
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "minimum-stability": "stable"
+}

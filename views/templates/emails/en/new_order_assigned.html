@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuevo Pedido de tu Cliente Asignado</title>
+    <title>New Order from Your Assigned Customer</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -51,34 +51,34 @@
 </head>
 <body>
     <div class="header">
-        <h1>¡Nuevo Pedido!</h1>
+        <h1>New Order!</h1>
     </div>
-    
+
     <div class="content">
-        <p>Hola <strong>{employee_name}</strong>,</p>
-        
-        <p>¡Buenas noticias! Uno de tus clientes asignados acaba de realizar un nuevo pedido.</p>
-        
+        <p>Hello <strong>{employee_name}</strong>,</p>
+
+        <p>Good news! One of your assigned customers has just placed a new order.</p>
+
         <div class="order-details">
-            <h3>Detalles del Pedido:</h3>
-            <p><strong>Cliente:</strong> {customer_name}</p>
-            <p><strong>Referencia del Pedido:</strong> {order_reference}</p>
-            <p><strong>Total del Pedido:</strong> {order_total}</p>
+            <h3>Order Details:</h3>
+            <p><strong>Customer:</strong> {customer_name}</p>
+            <p><strong>Order Reference:</strong> {order_reference}</p>
+            <p><strong>Order Total:</strong> {order_total}</p>
         </div>
-        
-        <p>Puedes ver y gestionar este pedido haciendo clic en el botón de abajo:</p>
-        
+
+        <p>You can view and manage this order by clicking the button below:</p>
+
         <center>
-            <a href="{order_link}" class="button">Ver Pedido</a>
+            <a href="{order_link}" class="button">View Order</a>
         </center>
-        
+
         <p style="margin-top: 30px;">
-            <small>Esta es una notificación automática del módulo Personal Salesmen. Recibes este email porque estás asignado a este cliente.</small>
+            <small>This is an automatic notification from the Personal Salesmen module. You receive this email because you are assigned to this customer.</small>
         </p>
     </div>
-    
+
     <div class="footer">
-        <p>© {date_full} {shop_name}. Todos los derechos reservados.</p>
+        <p>© {date_full} {shop_name}. All rights reserved.</p>
     </div>
 </body>
 </html>

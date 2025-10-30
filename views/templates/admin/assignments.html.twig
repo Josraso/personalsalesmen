@@ -1,0 +1,314 @@
+{% extends '@PrestaShop/Admin/layout.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .assignment-card {
+            transition: all 0.2s ease;
+        }
+        .assignment-card:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .assignment-item {
+            padding: 8px 12px;
+            border-left: 3px solid #6c7ae0;
+            background: #f8f9fa;
+            margin-bottom: 8px;
+            border-radius: 4px;
+        }
+        .assignment-item:hover {
+            background: #e9ecef;
+        }
+        .badge-customer {
+            background: #28a745;
+        }
+        .badge-group {
+            background: #007bff;
+        }
+        .stats-card {
+            text-align: center;
+            padding: 20px;
+        }
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #6c7ae0;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Statistics Cards -->
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stats-card">
+            <div class="stats-number">{{ statistics.total_assignments ?? 0 }}</div>
+            <div class="text-muted">{{ 'Total Assignments'|trans({}, 'Modules.Personalsalesmen.Admin') }}</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stats-card">
+            <div class="stats-number">{{ statistics.total_employees ?? 0 }}</div>
+            <div class="text-muted">{{ 'Active Employees'|trans({}, 'Modules.Personalsalesmen.Admin') }}</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stats-card">
+            <div class="stats-number">{{ statistics.customer_assignments ?? 0 }}</div>
+            <div class="text-muted">{{ 'Customer Assignments'|trans({}, 'Modules.Personalsalesmen.Admin') }}</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stats-card">
+            <div class="stats-number">{{ statistics.group_assignments ?? 0 }}</div>
+            <div class="text-muted">{{ 'Group Assignments'|trans({}, 'Modules.Personalsalesmen.Admin') }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-header-title">
+                    <i class="material-icons">people</i>
+                    {{ 'Assignments by Employee'|trans({}, 'Modules.Personalsalesmen.Admin') }}
+                </h3>
+                <div class="card-header-actions">
+                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#newAssignmentModal">
+                        <i class="material-icons">add</i>
+                        {{ 'New Assignment'|trans({}, 'Modules.Personalsalesmen.Admin') }}
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if assignments is empty %}
+                    <div class="alert alert-info">
+                        <p class="alert-text">
+                            {{ 'No assignments found. Create your first assignment using the button above.'|trans({}, 'Modules.Personalsalesmen.Admin') }}
+                        </p>
+                    </div>
+                {% else %}
+                    {% for employeeData in assignments %}
+                        <div class="card assignment-card mb-3">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">
+                                    <i class="material-icons" style="vertical-align: middle;">person</i>
+                                    {{ employeeData.employee.name }}
+                                    <small class="text-muted">({{ employeeData.employee.email }})</small>
+                                    <span class="badge badge-secondary ml-2">{{ employeeData.assignments|length }} {{ 'assignments'|trans({}, 'Modules.Personalsalesmen.Admin') }}</span>
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    {% for assignment in employeeData.assignments %}
+                                        <div class="col-md-6 mb-2">
+                                            <div class="assignment-item d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    {% if assignment.type == 'customer' %}
+                                                        <span class="badge badge-customer">{{ 'Customer'|trans({}, 'Modules.Personalsalesmen.Admin') }}</span>
+                                                    {% else %}
+                                                        <span class="badge badge-group">{{ 'Group'|trans({}, 'Modules.Personalsalesmen.Admin') }}</span>
+                                                    {% endif %}
+                                                    <strong>{{ assignment.target.name }}</strong>
+                                                    {% if assignment.target.email is defined %}
+                                                        <br><small class="text-muted">{{ assignment.target.email }}</small>
+                                                    {% endif %}
+                                                </div>
+                                                <div>
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-danger delete-assignment" 
+                                                            data-id="{{ assignment.id }}"
+                                                            title="{{ 'Delete'|trans({}, 'Admin.Actions') }}">
+                                                        <i class="material-icons">delete</i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: New Assignment -->
+<div class="modal fade" id="newAssignmentModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ 'New Assignment'|trans({}, 'Modules.Personalsalesmen.Admin') }}</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="assignmentForm">
+                    <div class="form-group">
+                        <label for="id_employee">{{ 'Employee'|trans({}, 'Admin.Global') }} *</label>
+                        <select class="form-control" id="id_employee" name="id_employee" required>
+                            <option value="">{{ 'Select an employee'|trans({}, 'Modules.Personalsalesmen.Admin') }}</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>{{ 'Assignment Type'|trans({}, 'Modules.Personalsalesmen.Admin') }} *</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="assignment_type" id="type_customer" value="customer" checked>
+                            <label class="form-check-label" for="type_customer">
+                                {{ 'Specific Customer'|trans({}, 'Modules.Personalsalesmen.Admin') }}
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="assignment_type" id="type_group" value="group">
+                            <label class="form-check-label" for="type_group">
+                                {{ 'Customer Group'|trans({}, 'Modules.Personalsalesmen.Admin') }}
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="customer_select_group">
+                        <label for="id_customer">{{ 'Customer'|trans({}, 'Admin.Global') }} *</label>
+                        <select class="form-control" id="id_customer" name="id_customer">
+                            <option value="">{{ 'Search for a customer'|trans({}, 'Modules.Personalsalesmen.Admin') }}</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="group_select_group" style="display:none;">
+                        <label for="id_group">{{ 'Group'|trans({}, 'Admin.Global') }} *</label>
+                        <select class="form-control" id="id_group" name="id_group">
+                            <option value="">{{ 'Select a group'|trans({}, 'Modules.Personalsalesmen.Admin') }}</option>
+                        </select>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <small>{{ 'The employee will be able to see all orders and data from the assigned customer or group.'|trans({}, 'Modules.Personalsalesmen.Admin') }}</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ 'Cancel'|trans({}, 'Admin.Actions') }}</button>
+                <button type="button" class="btn btn-primary" id="saveAssignment">{{ 'Save'|trans({}, 'Admin.Actions') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        $(document).ready(function() {
+            // Toggle assignment type
+            $('input[name="assignment_type"]').on('change', function() {
+                if ($(this).val() === 'customer') {
+                    $('#customer_select_group').show();
+                    $('#group_select_group').hide();
+                    $('#id_group').val('');
+                } else {
+                    $('#customer_select_group').hide();
+                    $('#group_select_group').show();
+                    $('#id_customer').val('');
+                }
+            });
+
+            // Load employees on modal open
+            $('#newAssignmentModal').on('show.bs.modal', function() {
+                $.ajax({
+                    url: '{{ path('admin_personalsalesmen_search_employees') }}',
+                    method: 'GET',
+                    success: function(data) {
+                        var select = $('#id_employee');
+                        select.empty().append('<option value="">{{ 'Select an employee'|trans({}, 'Modules.Personalsalesmen.Admin') }}</option>');
+                        data.results.forEach(function(item) {
+                            select.append('<option value="' + item.id + '">' + item.text + '</option>');
+                        });
+                    }
+                });
+
+                // Load groups
+                $.ajax({
+                    url: '{{ path('admin_personalsalesmen_search_groups') }}',
+                    method: 'GET',
+                    success: function(data) {
+                        var select = $('#id_group');
+                        select.empty().append('<option value="">{{ 'Select a group'|trans({}, 'Modules.Personalsalesmen.Admin') }}</option>');
+                        data.results.forEach(function(item) {
+                            select.append('<option value="' + item.id + '">' + item.text + '</option>');
+                        });
+                    }
+                });
+            });
+
+            // Customer search (Select2 style)
+            $('#id_customer').select2({
+                ajax: {
+                    url: '{{ path('admin_personalsalesmen_search_customers') }}',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function(params) {
+                        return { q: params.term };
+                    },
+                    processResults: function(data) {
+                        return { results: data.results };
+                    }
+                },
+                minimumInputLength: 2
+            });
+
+            // Save assignment
+            $('#saveAssignment').on('click', function() {
+                var formData = {
+                    id_employee: $('#id_employee').val(),
+                    id_customer: $('input[name="assignment_type"]:checked').val() === 'customer' ? $('#id_customer').val() : null,
+                    id_group: $('input[name="assignment_type"]:checked').val() === 'group' ? $('#id_group').val() : null
+                };
+
+                if (!formData.id_employee || (!formData.id_customer && !formData.id_group)) {
+                    alert('{{ 'Please fill all required fields'|trans({}, 'Modules.Personalsalesmen.Admin') }}');
+                    return;
+                }
+
+                $.ajax({
+                    url: '{{ path('admin_personalsalesmen_create') }}',
+                    method: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert(response.error);
+                        }
+                    },
+                    error: function() {
+                        alert('{{ 'An error occurred'|trans({}, 'Admin.Notifications.Error') }}');
+                    }
+                });
+            });
+
+            // Delete assignment
+            $('.delete-assignment').on('click', function() {
+                if (!confirm('{{ 'Are you sure you want to delete this assignment?'|trans({}, 'Modules.Personalsalesmen.Admin') }}')) {
+                    return;
+                }
+
+                var id = $(this).data('id');
+                $.ajax({
+                    url: '{{ path('admin_personalsalesmen_delete', {id: '__ID__'}) }}'.replace('__ID__', id),
+                    method: 'POST',
+                    success: function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert(response.error);
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+{% endblock %}

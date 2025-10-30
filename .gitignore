@@ -1,0 +1,31 @@
+# Composer
+/vendor/
+composer.lock
+
+# IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Cache
+/cache/
+/tmp/
+
+# Environment
+.env
+.env.local
+
+# Build files
+/node_modules/
+package-lock.json
+yarn.lock
+
+# PrestaShop
+config_*.php
+index.php

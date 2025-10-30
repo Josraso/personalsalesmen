@@ -46,7 +46,7 @@ class PersonalSalesmen extends Module
     }
 
     /**
-     * Instalación del módulo
+     * InstalaciÃ³n del mÃ³dulo
      */
     public function install(): bool
     {
@@ -57,7 +57,7 @@ class PersonalSalesmen extends Module
         // Crear tablas
         require_once __DIR__ . '/sql/install.php';
 
-        // Configuración por defecto
+        // ConfiguraciÃ³n por defecto
         Configuration::updateValue('PSM_RESTRICTION_ENABLED', 1);
         Configuration::updateValue('PSM_EMAIL_NOTIFICATIONS', 1);
 
@@ -72,14 +72,14 @@ class PersonalSalesmen extends Module
     }
 
     /**
-     * Desinstalación del módulo
+     * DesinstalaciÃ³n del mÃ³dulo
      */
     public function uninstall(): bool
     {
         // Eliminar tablas
         require_once __DIR__ . '/sql/uninstall.php';
 
-        // Eliminar configuración
+        // Eliminar configuraciÃ³n
         Configuration::deleteByName('PSM_RESTRICTION_ENABLED');
         Configuration::deleteByName('PSM_EMAIL_NOTIFICATIONS');
 
@@ -90,7 +90,7 @@ class PersonalSalesmen extends Module
     }
 
     /**
-     * Instalar tab en el menú
+     * Instalar tab en el menÃº
      */
     private function installTab(): bool
     {
@@ -122,7 +122,7 @@ class PersonalSalesmen extends Module
     }
 
     /**
-     * Página de configuración
+     * PÃ¡gina de configuraciÃ³n
      */
     public function getContent(): string
     {
@@ -140,7 +140,7 @@ class PersonalSalesmen extends Module
     }
 
     /**
-     * Formulario de configuración
+     * Formulario de configuraciÃ³n
      */
     private function renderConfigForm(): string
     {
@@ -161,7 +161,7 @@ class PersonalSalesmen extends Module
     }
 
     /**
-     * Estructura del formulario de configuración
+     * Estructura del formulario de configuraciÃ³n
      */
     private function getConfigFormStructure(): array
     {
@@ -289,7 +289,7 @@ class PersonalSalesmen extends Module
     }
 
     /**
-     * Aplicar restricción de acceso a query builder
+     * Aplicar restricciÃ³n de acceso a query builder
      */
     private function applyAccessRestriction($queryBuilder, string $alias, string $field): void
     {
@@ -332,7 +332,7 @@ class PersonalSalesmen extends Module
     }
 
     /**
-     * Enviar notificación de pedido
+     * Enviar notificaciÃ³n de pedido
      */
     private function sendOrderNotification(Employee $employee, Customer $customer, Order $order): void
     {

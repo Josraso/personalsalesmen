@@ -1,0 +1,61 @@
+# Personal Salesmen Module Routes
+
+# Main index page
+admin_personalsalesmen_index:
+  path: /personalsalesmen
+  methods: [GET]
+  defaults:
+    _controller: 'PrestaShop\Module\PersonalSalesmen\Controller\Admin\AssignmentAdminController::indexAction'
+    _legacy_controller: AdminPersonalSalesmen
+
+# Create new assignment
+admin_personalsalesmen_create:
+  path: /personalsalesmen/create
+  methods: [POST]
+  defaults:
+    _controller: 'PrestaShop\Module\PersonalSalesmen\Controller\Admin\AssignmentAdminController::createAction'
+    _legacy_controller: AdminPersonalSalesmen
+
+# Delete assignment
+admin_personalsalesmen_delete:
+  path: /personalsalesmen/delete/{id}
+  methods: [POST, DELETE]
+  defaults:
+    _controller: 'PrestaShop\Module\PersonalSalesmen\Controller\Admin\AssignmentAdminController::deleteAction'
+    _legacy_controller: AdminPersonalSalesmen
+  requirements:
+    id: \d+
+
+# Toggle assignment active status
+admin_personalsalesmen_toggle:
+  path: /personalsalesmen/toggle/{id}
+  methods: [POST]
+  defaults:
+    _controller: 'PrestaShop\Module\PersonalSalesmen\Controller\Admin\AssignmentAdminController::toggleAction'
+    _legacy_controller: AdminPersonalSalesmen
+  requirements:
+    id: \d+
+
+# Search customers (AJAX)
+admin_personalsalesmen_search_customers:
+  path: /personalsalesmen/search/customers
+  methods: [GET]
+  defaults:
+    _controller: 'PrestaShop\Module\PersonalSalesmen\Controller\Admin\AssignmentAdminController::searchCustomersAction'
+    _legacy_controller: AdminPersonalSalesmen
+
+# Search groups (AJAX)
+admin_personalsalesmen_search_groups:
+  path: /personalsalesmen/search/groups
+  methods: [GET]
+  defaults:
+    _controller: 'PrestaShop\Module\PersonalSalesmen\Controller\Admin\AssignmentAdminController::searchGroupsAction'
+    _legacy_controller: AdminPersonalSalesmen
+
+# Search employees (AJAX)
+admin_personalsalesmen_search_employees:
+  path: /personalsalesmen/search/employees
+  methods: [GET]
+  defaults:
+    _controller: 'PrestaShop\Module\PersonalSalesmen\Controller\Admin\AssignmentAdminController::searchEmployeesAction'
+    _legacy_controller: AdminPersonalSalesmen
