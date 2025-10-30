@@ -136,105 +136,14 @@ class PersonalSalesmen extends Module
             $output .= $this->displayConfirmation($this->trans('Settings updated successfully.', [], 'Modules.Personalsalesmen.Admin'));
         }
 
-        // Mostrar llamada a la acción destacada
-        $output .= $this->renderCallToAction();
-
-        // Formulario de configuración
-        $output .= $this->renderConfigForm();
-
-        // Guía rápida
-        $output .= $this->renderQuickGuide();
-
-        return $output;
-    }
-
-    /**
-     * Renderizar llamada a la acción para gestionar asignaciones
-     */
-    private function renderCallToAction(): string
-    {
-        $assignmentsUrl = $this->context->link->getAdminLink('AdminPersonalSalesmen', true);
-
-        return '
-        <div class="alert alert-info" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 30px; margin-bottom: 20px;">
-            <div style="text-align: center; color: white;">
-                <h2 style="color: white; margin-bottom: 15px;">
-                    <i class="material-icons" style="font-size: 48px; vertical-align: middle;">people</i>
-                    ¿Buscas gestionar las asignaciones de empleados?
-                </h2>
-                <p style="font-size: 16px; margin-bottom: 20px; color: white;">
-                    Esta página es solo para <strong>configuración general</strong>.<br>
-                    Para <strong>asignar clientes a empleados</strong>, ve a:
-                </p>
-                <div style="background: white; display: inline-block; padding: 15px 30px; border-radius: 8px; margin-bottom: 20px;">
-                    <h4 style="margin: 0; color: #667eea;">
-                        <i class="material-icons" style="vertical-align: middle; color: #667eea;">folder</i>
-                        <strong>Clientes > Personal Salesmen</strong>
-                    </h4>
-                </div>
-                <br>
-                <a href="' . $assignmentsUrl . '" class="btn btn-lg btn-light" style="padding: 15px 40px; font-size: 18px; font-weight: bold;">
-                    <i class="material-icons" style="vertical-align: middle;">arrow_forward</i>
-                    Ir a Gestión de Asignaciones
-                </a>
-            </div>
+        // Banner informativo
+        $output .= '<div class="alert alert-info">
+            <h4><i class="icon-info"></i> ' . $this->l('How to manage assignments') . '</h4>
+            <p>' . $this->l('To assign customers to employees, go to:') . ' <strong>' . $this->l('Customers > Personal Salesmen') . '</strong></p>
+            <p>' . $this->l('This page is only for general module configuration.') . '</p>
         </div>';
-    }
 
-    /**
-     * Renderizar guía rápida
-     */
-    private function renderQuickGuide(): string
-    {
-        return '
-        <div class="panel" style="margin-top: 20px;">
-            <div class="panel-heading">
-                <i class="icon-info-circle"></i> ' . $this->trans('Quick Guide', [], 'Modules.Personalsalesmen.Admin') . '
-            </div>
-            <div class="panel-body">
-                <div class="row">
-                    <div class="col-md-4">
-                        <div style="text-align: center; padding: 20px; border: 2px solid #ddd; border-radius: 8px; height: 100%;">
-                            <div style="font-size: 48px; color: #667eea; font-weight: bold;">1</div>
-                            <h4>' . $this->trans('Activate Restrictions', [], 'Modules.Personalsalesmen.Admin') . '</h4>
-                            <p>' . $this->trans('Enable "Access Restriction" above', [], 'Modules.Personalsalesmen.Admin') . '</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div style="text-align: center; padding: 20px; border: 2px solid #ddd; border-radius: 8px; height: 100%;">
-                            <div style="font-size: 48px; color: #667eea; font-weight: bold;">2</div>
-                            <h4>' . $this->trans('Create Assignments', [], 'Modules.Personalsalesmen.Admin') . '</h4>
-                            <p>' . $this->trans('Go to Customers > Personal Salesmen', [], 'Modules.Personalsalesmen.Admin') . '</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div style="text-align: center; padding: 20px; border: 2px solid #ddd; border-radius: 8px; height: 100%;">
-                            <div style="font-size: 48px; color: #667eea; font-weight: bold;">3</div>
-                            <h4>' . $this->trans('Assign Employees', [], 'Modules.Personalsalesmen.Admin') . '</h4>
-                            <p>' . $this->trans('Select employee, customer or group', [], 'Modules.Personalsalesmen.Admin') . '</p>
-                        </div>
-                    </div>
-                </div>
-                <hr>
-                <div class="row" style="margin-top: 20px;">
-                    <div class="col-md-6">
-                        <h4><i class="icon-lock"></i> ' . $this->trans('Access Restriction', [], 'Modules.Personalsalesmen.Admin') . '</h4>
-                        <ul>
-                            <li>' . $this->trans('When enabled, employees can only see their assigned customers and orders.', [], 'Modules.Personalsalesmen.Admin') . '</li>
-                            <li>' . $this->trans('SuperAdmin (Profile ID 1) always sees everything.', [], 'Modules.Personalsalesmen.Admin') . '</li>
-                            <li>' . $this->trans('Employees see customers assigned directly or through groups.', [], 'Modules.Personalsalesmen.Admin') . '</li>
-                        </ul>
-                    </div>
-                    <div class="col-md-6">
-                        <h4><i class="icon-envelope"></i> ' . $this->trans('Email Notifications', [], 'Modules.Personalsalesmen.Admin') . '</h4>
-                        <ul>
-                            <li>' . $this->trans('Send email to employees when their assigned customers place orders.', [], 'Modules.Personalsalesmen.Admin') . '</li>
-                            <li>' . $this->trans('Only active employees with valid email addresses receive notifications.', [], 'Modules.Personalsalesmen.Admin') . '</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>';
+        return $output . $this->renderConfigForm();
     }
 
     /**
