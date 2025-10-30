@@ -3,6 +3,31 @@
 {% block content %}
 <div class="row">
     <div class="col-12">
+        <!-- CALL TO ACTION: Gestionar Asignaciones -->
+        <div class="card bg-primary text-white mb-3">
+            <div class="card-body text-center" style="padding: 30px;">
+                <h2 class="text-white mb-3">
+                    <i class="material-icons" style="font-size: 48px; vertical-align: middle;">people</i>
+                    ¿Buscas gestionar las asignaciones?
+                </h2>
+                <p class="lead text-white mb-4">
+                    Para asignar clientes a empleados, ve al menú principal:
+                </p>
+                <div class="alert alert-light" style="display: inline-block; padding: 15px 30px; margin-bottom: 20px;">
+                    <h4 style="margin: 0;">
+                        <i class="material-icons" style="vertical-align: middle;">folder</i>
+                        <strong>Clientes > Personal Salesmen</strong>
+                    </h4>
+                </div>
+                <br>
+                <a href="{{ getAdminLink('AdminPersonalSalesmen') }}" class="btn btn-lg btn-light" style="padding: 15px 40px; font-size: 18px;">
+                    <i class="material-icons" style="vertical-align: middle;">arrow_forward</i>
+                    Ir a Gestión de Asignaciones
+                </a>
+            </div>
+        </div>
+
+        <!-- CONFIGURACIÓN -->
         <div class="card">
             <div class="card-header">
                 <h3 class="card-header-title">
@@ -13,6 +38,7 @@
             <div class="card-body">
                 <div class="alert alert-info">
                     <p class="alert-text">
+                        <strong>Esta página es solo para configuración general.</strong><br>
                         {{ 'Configure how the Personal Salesmen module works.'|trans({}, 'Modules.Personalsalesmen.Admin') }}
                     </p>
                 </div>
@@ -21,6 +47,7 @@
             </div>
         </div>
 
+        <!-- CÓMO FUNCIONA -->
         <div class="card mt-3">
             <div class="card-header">
                 <h3 class="card-header-title">
@@ -29,24 +56,49 @@
                 </h3>
             </div>
             <div class="card-body">
-                <h5>{{ 'Access Restriction'|trans({}, 'Modules.Personalsalesmen.Admin') }}</h5>
-                <ul>
-                    <li>{{ 'When enabled, employees can only see customers and orders assigned to them.'|trans({}, 'Modules.Personalsalesmen.Admin') }}</li>
-                    <li>{{ 'SuperAdmin (Profile ID 1) always sees everything.'|trans({}, 'Modules.Personalsalesmen.Admin') }}</li>
-                    <li>{{ 'Employees see customers assigned directly or through groups.'|trans({}, 'Modules.Personalsalesmen.Admin') }}</li>
-                </ul>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>{{ 'Access Restriction'|trans({}, 'Modules.Personalsalesmen.Admin') }}</h5>
+                        <ul>
+                            <li>{{ 'When enabled, employees can only see customers and orders assigned to them.'|trans({}, 'Modules.Personalsalesmen.Admin') }}</li>
+                            <li>{{ 'SuperAdmin (Profile ID 1) always sees everything.'|trans({}, 'Modules.Personalsalesmen.Admin') }}</li>
+                            <li>{{ 'Employees see customers assigned directly or through groups.'|trans({}, 'Modules.Personalsalesmen.Admin') }}</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>{{ 'Email Notifications'|trans({}, 'Modules.Personalsalesmen.Admin') }}</h5>
+                        <ul>
+                            <li>{{ 'When enabled, employees receive an email when their assigned customers place orders.'|trans({}, 'Modules.Personalsalesmen.Admin') }}</li>
+                            <li>{{ 'Only active employees with valid email addresses receive notifications.'|trans({}, 'Modules.Personalsalesmen.Admin') }}</li>
+                        </ul>
+                    </div>
+                </div>
 
-                <h5 class="mt-3">{{ 'Email Notifications'|trans({}, 'Modules.Personalsalesmen.Admin') }}</h5>
-                <ul>
-                    <li>{{ 'When enabled, employees receive an email when their assigned customers place orders.'|trans({}, 'Modules.Personalsalesmen.Admin') }}</li>
-                    <li>{{ 'Only active employees with valid email addresses receive notifications.'|trans({}, 'Modules.Personalsalesmen.Admin') }}</li>
-                </ul>
+                <hr class="my-4">
 
-                <div class="alert alert-warning mt-3">
-                    <p class="alert-text">
-                        <strong>{{ 'Important:'|trans({}, 'Modules.Personalsalesmen.Admin') }}</strong>
-                        {{ 'To manage assignments, go to Customers > Personal Salesmen menu.'|trans({}, 'Modules.Personalsalesmen.Admin') }}
-                    </p>
+                <h5><i class="material-icons" style="vertical-align: middle;">help_outline</i> Guía Rápida</h5>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="text-center p-3 border rounded">
+                            <div class="display-4 text-primary">1</div>
+                            <h6>Activar Restricciones</h6>
+                            <p class="small">Activa "Enable Access Restriction" arriba</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center p-3 border rounded">
+                            <div class="display-4 text-primary">2</div>
+                            <h6>Crear Asignaciones</h6>
+                            <p class="small">Ve a <strong>Clientes > Personal Salesmen</strong></p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center p-3 border rounded">
+                            <div class="display-4 text-primary">3</div>
+                            <h6>Asignar Empleados</h6>
+                            <p class="small">Selecciona empleado, cliente o grupo</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
