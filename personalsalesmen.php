@@ -272,9 +272,9 @@ class PersonalSalesmen extends Module
             return;
         }
 
+        // Usar o.id_customer directamente sin JOIN (evita conflicto de alias)
         $params['search_query_builder']
-            ->leftJoin('o', _DB_PREFIX_ . 'customer', 'c', 'c.id_customer = o.id_customer')
-            ->andWhere('c.id_customer IN (' . implode(',', array_map('intval', $allowedIds)) . ')');
+            ->andWhere('o.id_customer IN (' . implode(',', array_map('intval', $allowedIds)) . ')');
     }
 
     /**
