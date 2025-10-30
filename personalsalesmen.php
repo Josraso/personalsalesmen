@@ -21,7 +21,6 @@ use PrestaShop\Module\PersonalSalesmen\Repository\AssignmentRepository;
 
 class PersonalSalesmen extends Module
 {
-    private $accessControl;
     private $assignmentService;
 
     public function __construct()
@@ -39,10 +38,18 @@ class PersonalSalesmen extends Module
         $this->description = $this->trans('Assign customers and groups to specific employees. Employees only see their assigned data.', [], 'Modules.Personalsalesmen.Admin');
         $this->ps_versions_compliancy = ['min' => '8.0.0', 'max' => '9.99.99'];
 
-        // Inicializar servicios
-        $this->accessControl = new AccessControlService($this->context);
+        // Inicializar solo AssignmentService (AccessControlService se crea cuando se necesita)
         $repository = new AssignmentRepository();
         $this->assignmentService = new AssignmentService($repository);
+    }
+
+    /**
+     * Obtener AccessControlService con contexto actual
+     * IMPORTANTE: No cachear en propiedad, crear siempre nuevo para tener contexto actualizado
+     */
+    private function getAccessControl(): AccessControlService
+    {
+        return new AccessControlService($this->context);
     }
 
     /**
@@ -213,10 +220,11 @@ class PersonalSalesmen extends Module
      */
     public function hookActionAdminControllerSetMedia(): void
     {
+        $accessControl = $this->getAccessControl();
         $controller = $this->context->controller->controller_name ?? '';
         $protectedControllers = ['AdminOrders', 'AdminCustomers', 'AdminAddresses'];
 
-        if (!in_array($controller, $protectedControllers) || $this->accessControl->canSeeEverything()) {
+        if (!in_array($controller, $protectedControllers) || $accessControl->canSeeEverything()) {
             return;
         }
 
@@ -227,7 +235,7 @@ class PersonalSalesmen extends Module
         if ($resourceId > 0) {
             $customerId = $this->getCustomerIdFromResource($controller, $resourceId);
 
-            if ($customerId && !$this->accessControl->canAccessCustomer($customerId)) {
+            if ($customerId && !$accessControl->canAccessCustomer($customerId)) {
                 $this->context->controller->errors[] = $this->trans(
                     'You do not have permission to access this resource.',
                     [],
@@ -251,11 +259,13 @@ class PersonalSalesmen extends Module
      */
     public function hookActionOrderGridQueryBuilderModifier(array $params): void
     {
-        if ($this->accessControl->canSeeEverything()) {
+        $accessControl = $this->getAccessControl();
+
+        if ($accessControl->canSeeEverything()) {
             return;
         }
 
-        $allowedIds = $this->accessControl->getAllowedCustomerIds();
+        $allowedIds = $accessControl->getAllowedCustomerIds();
 
         if (empty($allowedIds)) {
             $params['search_query_builder']->andWhere('1 = 0');
@@ -299,11 +309,13 @@ class PersonalSalesmen extends Module
      */
     private function applyAccessRestriction($queryBuilder, string $alias, string $field): void
     {
-        if ($this->accessControl->canSeeEverything()) {
+        $accessControl = $this->getAccessControl();
+
+        if ($accessControl->canSeeEverything()) {
             return;
         }
 
-        $allowedIds = $this->accessControl->getAllowedCustomerIds();
+        $allowedIds = $accessControl->getAllowedCustomerIds();
 
         if (empty($allowedIds)) {
             $queryBuilder->andWhere('1 = 0');
