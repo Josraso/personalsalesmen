@@ -4,9 +4,9 @@
  *
  * INSTRUCCIONES:
  * 1. Sube este archivo a: /modules/personalsalesmen/debug.php
- * 2. Accede desde el navegador como el EMPLEADO que no ve filtros
- * 3. Ve a: https://tu-tienda.com/modules/personalsalesmen/debug.php
- * 4. Copia TODA la salida y envíamela
+ * 2. Desde el BACKOFFICE, accede a:
+ *    https://tu-tienda.com/modules/personalsalesmen/debug.php?token=debug123
+ * 3. Copia TODA la salida y envíamela
  */
 
 // Bootstrap PrestaShop
@@ -24,14 +24,35 @@ echo "=== PERSONAL SALESMEN MODULE - DEBUG INFO ===\n\n";
 $context = Context::getContext();
 $employee = $context->employee;
 
+// Verificar si hay un empleado logueado
+if (!$employee || !Validate::isLoadedObject($employee)) {
+    echo "ERROR CRÍTICO: No hay empleado logueado o la sesión no es válida.\n";
+    echo "\nINSTRUCCIONES:\n";
+    echo "1. Asegúrate de estar logueado en el backoffice de PrestaShop\n";
+    echo "2. Abre esta URL en una nueva pestaña del MISMO navegador donde estás logueado\n";
+    echo "3. O mejor, copia el contenido de este archivo y ejecútalo desde el módulo\n\n";
+    echo "INFO DE CONTEXTO:\n";
+    echo "- Context employee exists: " . (isset($context->employee) ? 'YES' : 'NO') . "\n";
+    echo "- Cookie exists: " . (isset($context->cookie) ? 'YES' : 'NO') . "\n";
+    if (isset($context->cookie)) {
+        echo "- Cookie id_employee: " . (int)$context->cookie->id_employee . "\n";
+        echo "- Cookie email: " . ($context->cookie->email ?? 'N/A') . "\n";
+    }
+    die("\n=== FIN DEBUG (CON ERRORES) ===\n");
+}
+
 echo "1. EMPLEADO ACTUAL:\n";
 echo "   - ID: " . (int)$employee->id . "\n";
 echo "   - Nombre: " . $employee->firstname . " " . $employee->lastname . "\n";
 echo "   - Email: " . $employee->email . "\n";
 echo "   - Profile ID: " . (int)$employee->id_profile . "\n";
 echo "   - Profile Name: ";
-$profile = new Profile($employee->id_profile);
-echo $profile->name[1] . "\n\n";
+try {
+    $profile = new Profile($employee->id_profile);
+    echo (isset($profile->name[1]) ? $profile->name[1] : 'N/A') . "\n\n";
+} catch (Exception $e) {
+    echo "ERROR al cargar perfil\n\n";
+}
 
 // 2. Configuración del módulo
 echo "2. CONFIGURACIÓN DEL MÓDULO:\n";
@@ -90,11 +111,20 @@ echo "\n";
 echo "6. HOOKS REGISTRADOS:\n";
 $module = Module::getInstanceByName('personalsalesmen');
 if ($module) {
-    $hooks = Hook::getModuleHooks($module->id);
+    // Obtener hooks del módulo desde la base de datos
+    $sql = new DbQuery();
+    $sql->select('h.name, hm.id_hook');
+    $sql->from('hook_module', 'hm');
+    $sql->innerJoin('hook', 'h', 'h.id_hook = hm.id_hook');
+    $sql->where('hm.id_module = ' . (int)$module->id);
+    $sql->orderBy('h.name ASC');
+
+    $hooks = Db::getInstance()->executeS($sql);
     echo "   - Total hooks: " . count($hooks) . "\n";
-    foreach ($hooks as $hook) {
-        $hookObj = new Hook($hook['id_hook']);
-        echo "   - " . $hookObj->name . "\n";
+    if ($hooks) {
+        foreach ($hooks as $hook) {
+            echo "   - " . $hook['name'] . "\n";
+        }
     }
 } else {
     echo "   ERROR: Module not found!\n";

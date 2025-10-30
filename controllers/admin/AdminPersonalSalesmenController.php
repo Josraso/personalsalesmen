@@ -18,6 +18,7 @@ class AdminPersonalSalesmenController extends ModuleAdminController
 {
     private $accessControl;
     private $assignmentService;
+    private $showDebug = false;
 
     public function __construct()
     {
@@ -42,6 +43,12 @@ class AdminPersonalSalesmenController extends ModuleAdminController
      */
     public function postProcess()
     {
+        // Mostrar debug si se solicita
+        if (Tools::isSubmit('viewDebug')) {
+            $this->showDebug = true;
+            return; // No procesar más
+        }
+
         // Verificar permisos
         if (!$this->accessControl->canManageAssignments()) {
             $this->errors[] = $this->l('You do not have permission to manage assignments. Only SuperAdmin can access this page.');
@@ -98,6 +105,13 @@ class AdminPersonalSalesmenController extends ModuleAdminController
      */
     public function initContent()
     {
+        // Mostrar debug si se solicitó
+        if ($this->showDebug || Tools::isSubmit('viewDebug')) {
+            $this->content = $this->renderDebugInfo();
+            parent::initContent();
+            return;
+        }
+
         if (!$this->accessControl->canManageAssignments()) {
             $this->content = $this->displayError($this->l('You do not have permission to manage assignments. Only SuperAdmin can access this page.'));
             parent::initContent();
@@ -147,6 +161,14 @@ class AdminPersonalSalesmenController extends ModuleAdminController
         $html .= '<p style="margin: 5px 0 0 0;"><strong>' . $this->l('Group Assignments') . '</strong></p>';
         $html .= '</div></div></div>';
 
+        $html .= '</div>';
+
+        // Botón de Debug
+        $html .= '<div class="alert alert-info">';
+        $html .= '<p><i class="icon-info-circle"></i> ' . $this->l('If restrictions are not working correctly, use the debug tool to diagnose:') . '</p>';
+        $html .= '<a href="' . self::$currentIndex . '&viewDebug=1&token=' . $this->token . '" class="btn btn-primary">';
+        $html .= '<i class="icon-bug"></i> ' . $this->l('View Debug Info');
+        $html .= '</a>';
         $html .= '</div>';
 
         return $html;
@@ -363,6 +385,150 @@ class AdminPersonalSalesmenController extends ModuleAdminController
             $html .= '</table>';
         }
 
+        $html .= '</div>';
+
+        return $html;
+    }
+
+    /**
+     * Render debug information panel
+     */
+    private function renderDebugInfo()
+    {
+        $employee = $this->context->employee;
+        $repository = new AssignmentRepository();
+
+        $html = '<div class="panel">';
+        $html .= '<div class="panel-heading">';
+        $html .= '<i class="icon-bug"></i> ' . $this->l('Debug Information - Module Status');
+        $html .= '<a href="' . self::$currentIndex . '&token=' . $this->token . '" class="btn btn-default pull-right"><i class="icon-arrow-left"></i> ' . $this->l('Back') . '</a>';
+        $html .= '</div>';
+        $html .= '<div class="panel-body" style="font-family: monospace; font-size: 13px;">';
+
+        // 1. Employee Info
+        $html .= '<h4>1. EMPLEADO ACTUAL</h4>';
+        $html .= '<ul>';
+        $html .= '<li><strong>ID:</strong> ' . (int)$employee->id . '</li>';
+        $html .= '<li><strong>Nombre:</strong> ' . htmlspecialchars($employee->firstname . ' ' . $employee->lastname) . '</li>';
+        $html .= '<li><strong>Email:</strong> ' . htmlspecialchars($employee->email) . '</li>';
+        $html .= '<li><strong>Profile ID:</strong> ' . (int)$employee->id_profile . '</li>';
+        try {
+            $profile = new Profile($employee->id_profile);
+            $html .= '<li><strong>Profile Name:</strong> ' . (isset($profile->name[1]) ? htmlspecialchars($profile->name[1]) : 'N/A') . '</li>';
+        } catch (Exception $e) {
+            $html .= '<li><strong>Profile Name:</strong> ERROR</li>';
+        }
+        $html .= '</ul>';
+
+        // 2. Module Configuration
+        $html .= '<h4>2. CONFIGURACIÓN DEL MÓDULO</h4>';
+        $html .= '<ul>';
+        $restrictionEnabled = Configuration::get('PSM_RESTRICTION_ENABLED');
+        $html .= '<li><strong>PSM_RESTRICTION_ENABLED:</strong> <span style="color: ' . ($restrictionEnabled ? 'green' : 'red') . ';">' . ($restrictionEnabled ? 'YES (ON)' : 'NO (OFF)') . '</span></li>';
+        $html .= '<li><strong>PSM_EMAIL_NOTIFICATIONS:</strong> ' . (Configuration::get('PSM_EMAIL_NOTIFICATIONS') ? 'YES' : 'NO') . '</li>';
+        $html .= '</ul>';
+
+        // 3. Access Control
+        $html .= '<h4>3. ACCESS CONTROL SERVICE</h4>';
+        $accessControl = new AccessControlService($this->context);
+        $html .= '<ul>';
+        $canSeeEverything = $accessControl->canSeeEverything();
+        $html .= '<li><strong>Can See Everything:</strong> <span style="color: ' . ($canSeeEverything ? 'red' : 'green') . ';">' . ($canSeeEverything ? 'YES (no restrictions)' : 'NO (should be filtered)') . '</span></li>';
+        $html .= '<li><strong>Has Restrictions:</strong> ' . ($accessControl->hasRestrictions() ? 'YES' : 'NO') . '</li>';
+        $html .= '<li><strong>Can Manage Assignments:</strong> ' . ($accessControl->canManageAssignments() ? 'YES' : 'NO') . '</li>';
+        $html .= '</ul>';
+
+        // 4. Assignments for this employee
+        $assignments = $repository->findByEmployee((int)$employee->id);
+        $html .= '<h4>4. ASIGNACIONES PARA ESTE EMPLEADO</h4>';
+        $html .= '<p><strong>Total:</strong> ' . count($assignments) . '</p>';
+        if (!empty($assignments)) {
+            $html .= '<ul>';
+            foreach ($assignments as $assignment) {
+                $html .= '<li>';
+                if ($assignment['id_customer']) {
+                    $customer = new Customer($assignment['id_customer']);
+                    $html .= 'Customer: ' . htmlspecialchars($customer->firstname . ' ' . $customer->lastname) . ' (ID: ' . $assignment['id_customer'] . ')';
+                } elseif ($assignment['id_group']) {
+                    $group = new Group($assignment['id_group']);
+                    $html .= 'Group: ' . htmlspecialchars($group->name[1]) . ' (ID: ' . $assignment['id_group'] . ')';
+                }
+                $html .= ' - Active: ' . ($assignment['active'] ? '<span style="color: green;">YES</span>' : '<span style="color: red;">NO</span>');
+                $html .= '</li>';
+            }
+            $html .= '</ul>';
+        } else {
+            $html .= '<p style="color: red;"><strong>¡NO HAY ASIGNACIONES PARA ESTE EMPLEADO!</strong></p>';
+        }
+
+        // 5. Allowed Customer IDs
+        $allowedIds = $accessControl->getAllowedCustomerIds();
+        $html .= '<h4>5. CLIENTES PERMITIDOS (IDs)</h4>';
+        $html .= '<p><strong>Total IDs:</strong> ' . count($allowedIds) . '</p>';
+        if (!empty($allowedIds)) {
+            $html .= '<p><strong>IDs:</strong> ' . implode(', ', array_slice($allowedIds, 0, 50));
+            if (count($allowedIds) > 50) {
+                $html .= ' ... (+' . (count($allowedIds) - 50) . ' more)';
+            }
+            $html .= '</p>';
+        } else {
+            $html .= '<p style="color: red;"><strong>Array vacío = SIN ASIGNACIONES o configuración desactivada</strong></p>';
+        }
+
+        // 6. SQL Filter Test
+        $html .= '<h4>6. SQL FILTER TEST</h4>';
+        $sqlFilter = $accessControl->getSQLFilter('c', 'id_customer');
+        $html .= '<p><strong>Filter:</strong> <code>' . htmlspecialchars($sqlFilter) . '</code></p>';
+
+        // 7. Hooks Registered
+        $html .= '<h4>7. HOOKS REGISTRADOS</h4>';
+        $module = Module::getInstanceByName('personalsalesmen');
+        if ($module) {
+            $sql = new DbQuery();
+            $sql->select('h.name');
+            $sql->from('hook_module', 'hm');
+            $sql->innerJoin('hook', 'h', 'h.id_hook = hm.id_hook');
+            $sql->where('hm.id_module = ' . (int)$module->id);
+            $sql->orderBy('h.name ASC');
+
+            $hooks = Db::getInstance()->executeS($sql);
+            $html .= '<p><strong>Total:</strong> ' . count($hooks) . '</p>';
+            if ($hooks) {
+                $html .= '<ul>';
+                foreach ($hooks as $hook) {
+                    $html .= '<li>' . htmlspecialchars($hook['name']) . '</li>';
+                }
+                $html .= '</ul>';
+            }
+        }
+
+        // 8. Diagnosis
+        $html .= '<h4>8. DIAGNÓSTICO</h4>';
+        $html .= '<div style="background: #f0f0f0; padding: 15px; border-left: 4px solid #666;">';
+
+        if ($employee->id_profile == 1) {
+            $html .= '<p><strong style="color: blue;">✓ Eres SuperAdmin (Profile ID = 1)</strong><br>';
+            $html .= 'Los SuperAdmin siempre ven TODO sin restricciones. Esto es normal.</p>';
+        } elseif (!$restrictionEnabled) {
+            $html .= '<p><strong style="color: orange;">⚠ Restricciones DESACTIVADAS</strong><br>';
+            $html .= 'PSM_RESTRICTION_ENABLED está en OFF. Ve a configuración del módulo y actívalo.</p>';
+        } elseif (empty($assignments)) {
+            $html .= '<p><strong style="color: red;">✗ NO TIENES ASIGNACIONES</strong><br>';
+            $html .= 'Este empleado no tiene clientes ni grupos asignados. Por eso verás todos los clientes.<br>';
+            $html .= 'Ve a Clientes > Personal Salesmen y crea una asignación para este empleado.</p>';
+        } elseif (empty($allowedIds)) {
+            $html .= '<p><strong style="color: red;">✗ ASIGNACIONES SIN CLIENTES</strong><br>';
+            $html .= 'Tienes asignaciones pero no se están obteniendo los IDs de clientes correctamente.<br>';
+            $html .= 'Verifica que los clientes/grupos asignados existan y estén activos.</p>';
+        } else {
+            $html .= '<p><strong style="color: green;">✓ TODO CONFIGURADO CORRECTAMENTE</strong><br>';
+            $html .= 'El módulo está configurado y tienes ' . count($allowedIds) . ' cliente(s) permitido(s).<br>';
+            $html .= 'Los filtros deberían estar funcionando. Si no es así, limpia la caché de PrestaShop.</p>';
+        }
+
+        $html .= '</div>';
+
+        $html .= '</div>';
         $html .= '</div>';
 
         return $html;
