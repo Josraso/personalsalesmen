@@ -1,12 +1,6 @@
 services:
   _defaults:
     public: true
-    autowire: true
-    autoconfigure: true
-
-  PrestaShop\Module\PersonalSalesmen\:
-    resource: '../src/*'
-    exclude: '../src/{Entity}'
 
   # Repository
   PrestaShop\Module\PersonalSalesmen\Repository\AssignmentRepository:
@@ -22,25 +16,3 @@ services:
     class: PrestaShop\Module\PersonalSalesmen\Service\AssignmentService
     arguments:
       - '@PrestaShop\Module\PersonalSalesmen\Repository\AssignmentRepository'
-
-  # Controller
-  PrestaShop\Module\PersonalSalesmen\Controller\Admin\AssignmentAdminController:
-    class: PrestaShop\Module\PersonalSalesmen\Controller\Admin\AssignmentAdminController
-    arguments:
-      - '@PrestaShop\Module\PersonalSalesmen\Service\AssignmentService'
-      - '@PrestaShop\Module\PersonalSalesmen\Service\AccessControlService'
-
-  # Grid Definition Factory
-  PrestaShop\Module\PersonalSalesmen\Grid\Definition\Factory\AssignmentGridDefinitionFactory:
-    class: PrestaShop\Module\PersonalSalesmen\Grid\Definition\Factory\AssignmentGridDefinitionFactory
-    parent: 'prestashop.core.grid.definition.factory.abstract_grid_definition'
-    public: true
-    tags:
-      - { name: 'prestashop.grid.definition_factory' }
-
-  # Grid Query Builder
-  PrestaShop\Module\PersonalSalesmen\Grid\Query\AssignmentQueryBuilder:
-    class: PrestaShop\Module\PersonalSalesmen\Grid\Query\AssignmentQueryBuilder
-    arguments:
-      - '@doctrine.dbal.default_connection'
-      - '%database_prefix%'

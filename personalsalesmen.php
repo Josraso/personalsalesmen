@@ -67,7 +67,6 @@ class PersonalSalesmen extends Module
             && $this->registerHook('actionOrderGridQueryBuilderModifier')
             && $this->registerHook('actionAddressGridQueryBuilderModifier')
             && $this->registerHook('actionValidateOrder')
-            && $this->registerHook('displayBackOfficeHeader')
             && $this->installTab();
     }
 
