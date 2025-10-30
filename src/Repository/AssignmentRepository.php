@@ -28,7 +28,7 @@ class AssignmentRepository
     }
 
     /**
-     * Obtener asignación por ID
+     * Obtener asignaciï¿½n por ID
      */
     public function findById(int $id): ?array
     {
@@ -69,7 +69,7 @@ class AssignmentRepository
         $sql->where('psa.active = 1');
         $sql->where('e.active = 1');
 
-        // También buscar por grupo
+        // Tambiï¿½n buscar por grupo
         $sql2 = new DbQuery();
         $sql2->select('DISTINCT e.*');
         $sql2->from('employee', 'e');
@@ -126,7 +126,7 @@ class AssignmentRepository
     }
 
     /**
-     * Crear nueva asignación
+     * Crear nueva asignaciÃ³n
      */
     public function create(array $data): bool
     {
@@ -134,11 +134,20 @@ class AssignmentRepository
         $data['date_upd'] = date('Y-m-d H:i:s');
         $data['active'] = isset($data['active']) ? (int)$data['active'] : 1;
 
+        // IMPORTANTE: Eliminar campos NULL para que la BD los maneje correctamente
+        // El constraint requiere que uno sea NULL y el otro tenga valor
+        if (!isset($data['id_customer']) || $data['id_customer'] === null || $data['id_customer'] === 0) {
+            unset($data['id_customer']);
+        }
+        if (!isset($data['id_group']) || $data['id_group'] === null || $data['id_group'] === 0) {
+            unset($data['id_group']);
+        }
+
         return Db::getInstance()->insert('personalsalesmen_assignment', $data);
     }
 
     /**
-     * Actualizar asignación
+     * Actualizar asignaciï¿½n
      */
     public function update(int $id, array $data): bool
     {
@@ -152,7 +161,7 @@ class AssignmentRepository
     }
 
     /**
-     * Eliminar asignación (soft delete)
+     * Eliminar asignaciï¿½n (soft delete)
      */
     public function delete(int $id): bool
     {
@@ -171,7 +180,7 @@ class AssignmentRepository
     }
 
     /**
-     * Verificar si existe asignación
+     * Verificar si existe asignaciï¿½n
      */
     public function exists(int $idEmployee, ?int $idCustomer, ?int $idGroup): bool
     {
@@ -195,7 +204,7 @@ class AssignmentRepository
     }
 
     /**
-     * Obtener estadísticas de asignaciones
+     * Obtener estadï¿½sticas de asignaciones
      */
     public function getStatistics(): array
     {

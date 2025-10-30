@@ -172,13 +172,13 @@ class AdminPersonalSalesmenController extends ModuleAdminController
                 . ' (' . htmlspecialchars($employee['email']) . ')</option>';
         }
 
-        // Obtener clientes
+        // Obtener clientes (con buscador ya no importa cargar más)
         $sql2 = new DbQuery();
         $sql2->select('id_customer, firstname, lastname, email, active');
         $sql2->from('customer');
         $sql2->where('active = 1 AND deleted = 0');
         $sql2->orderBy('firstname ASC, lastname ASC');
-        $sql2->limit(500); // Limitar para no cargar miles
+        $sql2->limit(2000); // Limite aumentado ya que tenemos buscador
         $customers = Db::getInstance()->executeS($sql2);
 
         $customerOptions = '<option value="">-- ' . $this->l('Select Customer') . ' --</option>';
@@ -226,14 +226,15 @@ class AdminPersonalSalesmenController extends ModuleAdminController
         $html .= '</div>';
         $html .= '</div></div>';
 
-        // Customer selector
+        // Customer selector with search
         $html .= '<div class="form-group" id="customer_selector">';
         $html .= '<label class="control-label col-lg-3">' . $this->l('Customer') . '</label>';
         $html .= '<div class="col-lg-9">';
-        $html .= '<select name="id_customer" id="id_customer" class="form-control">';
+        $html .= '<input type="text" id="customer_search" class="form-control" placeholder="' . $this->l('Type to search customer name or email...') . '" autocomplete="off">';
+        $html .= '<select name="id_customer" id="id_customer" class="form-control" style="margin-top: 10px;" size="8">';
         $html .= $customerOptions;
         $html .= '</select>';
-        $html .= '<p class="help-block">' . $this->l('Select a specific customer to assign.') . '</p>';
+        $html .= '<p class="help-block">' . $this->l('Search and select a customer from the list above.') . '</p>';
         $html .= '</div></div>';
 
         // Group selector
@@ -256,7 +257,7 @@ class AdminPersonalSalesmenController extends ModuleAdminController
         $html .= '</form>';
         $html .= '</div></div>';
 
-        // JavaScript para toggle
+        // JavaScript para toggle y búsqueda
         $html .= '<script>
         function toggleAssignmentType() {
             var isCustomer = document.getElementById("type_customer").checked;
@@ -269,6 +270,28 @@ class AdminPersonalSalesmenController extends ModuleAdminController
                 document.getElementById("id_customer").value = "";
             }
         }
+
+        // Filtrado de clientes por búsqueda
+        document.addEventListener("DOMContentLoaded", function() {
+            var searchInput = document.getElementById("customer_search");
+            var customerSelect = document.getElementById("id_customer");
+
+            if (searchInput && customerSelect) {
+                searchInput.addEventListener("keyup", function() {
+                    var filter = this.value.toLowerCase();
+                    var options = customerSelect.getElementsByTagName("option");
+
+                    for (var i = 0; i < options.length; i++) {
+                        var text = options[i].text.toLowerCase();
+                        if (text.indexOf(filter) > -1 || filter === "") {
+                            options[i].style.display = "";
+                        } else {
+                            options[i].style.display = "none";
+                        }
+                    }
+                });
+            }
+        });
         </script>';
 
         return $html;
