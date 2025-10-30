@@ -27,7 +27,7 @@
 
 - PrestaShop 8.0.0 or higher (compatible with 9.x)
 - PHP 7.2.5 or higher
-- Composer (optional, for development)
+- **No Composer required** - Works out of the box!
 
 ### Installation Steps
 
@@ -37,18 +37,12 @@
    unzip personalsalesmen.zip
    ```
 
-2. **Install Composer dependencies** (if developing):
-   ```bash
-   cd personalsalesmen
-   composer install
-   ```
-
-3. **Install the module** from PrestaShop Back Office:
+2. **Install the module** from PrestaShop Back Office:
    - Go to **Modules > Module Manager**
    - Search for "Personal Salesmen"
    - Click **Install**
 
-4. **Configure the module**:
+3. **Configure the module**:
    - After installation, click **Configure**
    - Enable/disable access restrictions
    - Enable/disable email notifications
@@ -200,12 +194,11 @@ Access via **Modules > Module Manager > Personal Salesmen > Configure**
 
 ## 🔧 Development
 
-### Running Composer
+### Custom Autoloader
 
-```bash
-composer install
-composer dump-autoload
-```
+The module includes a custom PSR-4 autoloader (`autoload.php`) that doesn't require Composer. All classes under the `PrestaShop\Module\PersonalSalesmen` namespace are automatically loaded.
+
+**Note:** Composer is **not required** for this module to work. The `composer.json` file is included only for package management and development purposes.
 
 ### Adding New Languages
 

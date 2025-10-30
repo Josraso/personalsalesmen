@@ -13,7 +13,7 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
-require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/autoload.php';
 
 use PrestaShop\Module\PersonalSalesmen\Service\AccessControlService;
 use PrestaShop\Module\PersonalSalesmen\Service\AssignmentService;
