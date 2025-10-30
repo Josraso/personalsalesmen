@@ -1,7 +1,7 @@
 <?php
 /**
  * Admin Controller for Personal Salesmen
- * Legacy controller for menu functionality
+ * FULLY FUNCTIONAL - Create, view and delete assignments
  */
 
 if (!defined('_PS_VERSION_')) {
@@ -38,61 +38,55 @@ class AdminPersonalSalesmenController extends ModuleAdminController
     }
 
     /**
-     * Render main page
-     */
-    public function renderView()
-    {
-        // Verificar permisos
-        if (!$this->accessControl->canManageAssignments()) {
-            $this->errors[] = $this->l('You do not have permission to manage assignments.');
-            return parent::renderView();
-        }
-
-        // Obtener asignaciones
-        $assignments = $this->assignmentService->getAssignmentsGroupedByEmployee();
-        $statistics = $this->assignmentService->getStatistics();
-
-        // Asignar a Smarty
-        $this->context->smarty->assign([
-            'assignments' => $assignments,
-            'statistics' => $statistics,
-            'module_dir' => $this->module->getPathUri(),
-            'controller_url' => $this->context->link->getAdminLink('AdminPersonalSalesmen', true),
-        ]);
-
-        // Usar template del módulo
-        return $this->module->display(_PS_MODULE_DIR_ . 'personalsalesmen/personalsalesmen.php', 'views/templates/admin/assignments_legacy.tpl');
-    }
-
-    /**
-     * Process actions
+     * Process form submissions
      */
     public function postProcess()
     {
+        // Verificar permisos
+        if (!$this->accessControl->canManageAssignments()) {
+            $this->errors[] = $this->l('You do not have permission to manage assignments. Only SuperAdmin can access this page.');
+            return;
+        }
+
         // Crear nueva asignación
         if (Tools::isSubmit('submitAddAssignment')) {
             $idEmployee = (int)Tools::getValue('id_employee');
-            $idCustomer = Tools::getValue('id_customer') ? (int)Tools::getValue('id_customer') : null;
-            $idGroup = Tools::getValue('id_group') ? (int)Tools::getValue('id_group') : null;
+            $assignmentType = Tools::getValue('assignment_type');
+            $idCustomer = null;
+            $idGroup = null;
 
-            $result = $this->assignmentService->createAssignment($idEmployee, $idCustomer, $idGroup);
-
-            if ($result['success']) {
-                $this->confirmations[] = $this->l('Assignment created successfully.');
+            if ($assignmentType === 'customer') {
+                $idCustomer = (int)Tools::getValue('id_customer');
             } else {
-                $this->errors[] = $result['error'];
+                $idGroup = (int)Tools::getValue('id_group');
+            }
+
+            if ($idEmployee <= 0) {
+                $this->errors[] = $this->l('Please select an employee.');
+            } elseif ($assignmentType === 'customer' && $idCustomer <= 0) {
+                $this->errors[] = $this->l('Please select a customer.');
+            } elseif ($assignmentType === 'group' && $idGroup <= 0) {
+                $this->errors[] = $this->l('Please select a customer group.');
+            } else {
+                $result = $this->assignmentService->createAssignment($idEmployee, $idCustomer, $idGroup);
+
+                if ($result['success']) {
+                    $this->confirmations[] = $this->l('Assignment created successfully!');
+                } else {
+                    $this->errors[] = $this->l('Error: ') . $result['error'];
+                }
             }
         }
 
         // Eliminar asignación
-        if (Tools::isSubmit('deleteAssignment')) {
+        if (Tools::isSubmit('deleteAssignment') && Tools::getValue('id_assignment')) {
             $id = (int)Tools::getValue('id_assignment');
             $result = $this->assignmentService->deleteAssignment($id);
 
             if ($result['success']) {
-                $this->confirmations[] = $this->l('Assignment deleted successfully.');
+                $this->confirmations[] = $this->l('Assignment deleted successfully!');
             } else {
-                $this->errors[] = $result['error'];
+                $this->errors[] = $this->l('Error: ') . $result['error'];
             }
         }
 
@@ -100,91 +94,240 @@ class AdminPersonalSalesmenController extends ModuleAdminController
     }
 
     /**
-     * Set default template
+     * Render the main content
      */
     public function initContent()
     {
-        $this->content = $this->renderSimpleInterface();
+        if (!$this->accessControl->canManageAssignments()) {
+            $this->content = $this->displayError($this->l('You do not have permission to manage assignments. Only SuperAdmin can access this page.'));
+            parent::initContent();
+            return;
+        }
+
+        $this->content = $this->renderStatistics();
+        $this->content .= $this->renderCreateForm();
+        $this->content .= $this->renderAssignmentsList();
+
         parent::initContent();
     }
 
     /**
-     * Render simple interface (fallback)
+     * Render statistics panel
      */
-    private function renderSimpleInterface()
+    private function renderStatistics()
     {
-        if (!$this->accessControl->canManageAssignments()) {
-            return $this->displayError($this->l('You do not have permission to manage assignments. Only SuperAdmin can access this page.'));
-        }
-
-        $assignments = $this->assignmentService->getAllAssignmentsWithDetails();
         $statistics = $this->assignmentService->getStatistics();
 
+        $html = '<div class="row" style="margin-bottom: 20px;">';
+        $html .= '<div class="col-lg-3">';
+        $html .= '<div class="panel" style="text-align: center; background: #e3f2fd;">';
+        $html .= '<div class="panel-body">';
+        $html .= '<h2 style="margin: 0; color: #1976d2;">' . (isset($statistics['total_assignments']) ? $statistics['total_assignments'] : 0) . '</h2>';
+        $html .= '<p style="margin: 5px 0 0 0;"><strong>' . $this->l('Total Assignments') . '</strong></p>';
+        $html .= '</div></div></div>';
+
+        $html .= '<div class="col-lg-3">';
+        $html .= '<div class="panel" style="text-align: center; background: #e8f5e9;">';
+        $html .= '<div class="panel-body">';
+        $html .= '<h2 style="margin: 0; color: #388e3c;">' . (isset($statistics['total_employees']) ? $statistics['total_employees'] : 0) . '</h2>';
+        $html .= '<p style="margin: 5px 0 0 0;"><strong>' . $this->l('Active Employees') . '</strong></p>';
+        $html .= '</div></div></div>';
+
+        $html .= '<div class="col-lg-3">';
+        $html .= '<div class="panel" style="text-align: center; background: #fff3e0;">';
+        $html .= '<div class="panel-body">';
+        $html .= '<h2 style="margin: 0; color: #f57c00;">' . (isset($statistics['customer_assignments']) ? $statistics['customer_assignments'] : 0) . '</h2>';
+        $html .= '<p style="margin: 5px 0 0 0;"><strong>' . $this->l('Customer Assignments') . '</strong></p>';
+        $html .= '</div></div></div>';
+
+        $html .= '<div class="col-lg-3">';
+        $html .= '<div class="panel" style="text-align: center; background: #f3e5f5;">';
+        $html .= '<div class="panel-body">';
+        $html .= '<h2 style="margin: 0; color: #7b1fa2;">' . (isset($statistics['group_assignments']) ? $statistics['group_assignments'] : 0) . '</h2>';
+        $html .= '<p style="margin: 5px 0 0 0;"><strong>' . $this->l('Group Assignments') . '</strong></p>';
+        $html .= '</div></div></div>';
+
+        $html .= '</div>';
+
+        return $html;
+    }
+
+    /**
+     * Render create assignment form
+     */
+    private function renderCreateForm()
+    {
+        // Obtener empleados
+        $employees = Employee::getEmployees();
+        $employeeOptions = '<option value="">-- ' . $this->l('Select Employee') . ' --</option>';
+        foreach ($employees as $employee) {
+            $employeeOptions .= '<option value="' . (int)$employee['id_employee'] . '">'
+                . htmlspecialchars($employee['firstname'] . ' ' . $employee['lastname'])
+                . ' (' . htmlspecialchars($employee['email']) . ')</option>';
+        }
+
+        // Obtener clientes
+        $customers = Customer::getCustomers();
+        $customerOptions = '<option value="">-- ' . $this->l('Select Customer') . ' --</option>';
+        foreach ($customers as $customer) {
+            $customerOptions .= '<option value="' . (int)$customer['id_customer'] . '">'
+                . htmlspecialchars($customer['firstname'] . ' ' . $customer['lastname'])
+                . ' (' . htmlspecialchars($customer['email']) . ')</option>';
+        }
+
+        // Obtener grupos
+        $groups = Group::getGroups($this->context->language->id);
+        $groupOptions = '<option value="">-- ' . $this->l('Select Group') . ' --</option>';
+        foreach ($groups as $group) {
+            $groupOptions .= '<option value="' . (int)$group['id_group'] . '">'
+                . htmlspecialchars($group['name']) . '</option>';
+        }
+
         $html = '<div class="panel">';
-        $html .= '<div class="panel-heading"><i class="icon-group"></i> ' . $this->l('Personal Salesmen - Manage Assignments') . '</div>';
+        $html .= '<div class="panel-heading">';
+        $html .= '<i class="icon-plus-sign"></i> ' . $this->l('Create New Assignment');
+        $html .= '</div>';
         $html .= '<div class="panel-body">';
 
-        // Estadísticas
-        $html .= '<div class="row">';
-        $html .= '<div class="col-md-3"><div class="alert alert-info text-center">';
-        $html .= '<h3>' . (isset($statistics['total_assignments']) ? $statistics['total_assignments'] : 0) . '</h3>';
-        $html .= '<p>' . $this->l('Total Assignments') . '</p>';
+        $html .= '<form method="post" action="' . self::$currentIndex . '&token=' . $this->token . '" class="form-horizontal">';
+
+        // Employee selector
+        $html .= '<div class="form-group">';
+        $html .= '<label class="control-label col-lg-3 required">' . $this->l('Employee') . '</label>';
+        $html .= '<div class="col-lg-9">';
+        $html .= '<select name="id_employee" id="id_employee" class="form-control" required>';
+        $html .= $employeeOptions;
+        $html .= '</select>';
+        $html .= '<p class="help-block">' . $this->l('Select the employee who will manage this assignment.') . '</p>';
         $html .= '</div></div>';
-        $html .= '<div class="col-md-3"><div class="alert alert-success text-center">';
-        $html .= '<h3>' . (isset($statistics['total_employees']) ? $statistics['total_employees'] : 0) . '</h3>';
-        $html .= '<p>' . $this->l('Active Employees') . '</p>';
+
+        // Assignment type
+        $html .= '<div class="form-group">';
+        $html .= '<label class="control-label col-lg-3 required">' . $this->l('Assignment Type') . '</label>';
+        $html .= '<div class="col-lg-9">';
+        $html .= '<div class="radio">';
+        $html .= '<label><input type="radio" name="assignment_type" value="customer" id="type_customer" checked onclick="toggleAssignmentType()"> ' . $this->l('Specific Customer') . '</label>';
+        $html .= '</div>';
+        $html .= '<div class="radio">';
+        $html .= '<label><input type="radio" name="assignment_type" value="group" id="type_group" onclick="toggleAssignmentType()"> ' . $this->l('Customer Group') . '</label>';
+        $html .= '</div>';
         $html .= '</div></div>';
-        $html .= '<div class="col-md-3"><div class="alert alert-warning text-center">';
-        $html .= '<h3>' . (isset($statistics['customer_assignments']) ? $statistics['customer_assignments'] : 0) . '</h3>';
-        $html .= '<p>' . $this->l('Customer Assignments') . '</p>';
+
+        // Customer selector
+        $html .= '<div class="form-group" id="customer_selector">';
+        $html .= '<label class="control-label col-lg-3">' . $this->l('Customer') . '</label>';
+        $html .= '<div class="col-lg-9">';
+        $html .= '<select name="id_customer" id="id_customer" class="form-control">';
+        $html .= $customerOptions;
+        $html .= '</select>';
+        $html .= '<p class="help-block">' . $this->l('Select a specific customer to assign.') . '</p>';
         $html .= '</div></div>';
-        $html .= '<div class="col-md-3"><div class="alert alert-primary text-center">';
-        $html .= '<h3>' . (isset($statistics['group_assignments']) ? $statistics['group_assignments'] : 0) . '</h3>';
-        $html .= '<p>' . $this->l('Group Assignments') . '</p>';
+
+        // Group selector
+        $html .= '<div class="form-group" id="group_selector" style="display:none;">';
+        $html .= '<label class="control-label col-lg-3">' . $this->l('Customer Group') . '</label>';
+        $html .= '<div class="col-lg-9">';
+        $html .= '<select name="id_group" id="id_group" class="form-control">';
+        $html .= $groupOptions;
+        $html .= '</select>';
+        $html .= '<p class="help-block">' . $this->l('Select a customer group. All customers in this group will be assigned.') . '</p>';
         $html .= '</div></div>';
+
+        // Submit button
+        $html .= '<div class="panel-footer">';
+        $html .= '<button type="submit" name="submitAddAssignment" class="btn btn-primary btn-lg">';
+        $html .= '<i class="icon-save"></i> ' . $this->l('Create Assignment');
+        $html .= '</button>';
         $html .= '</div>';
 
-        // Botón para crear
-        $html .= '<div class="alert alert-info">';
-        $html .= '<p><strong>' . $this->l('Note:') . '</strong> ' . $this->l('To create assignments, use the form below.') . '</p>';
+        $html .= '</form>';
+        $html .= '</div></div>';
+
+        // JavaScript para toggle
+        $html .= '<script>
+        function toggleAssignmentType() {
+            var isCustomer = document.getElementById("type_customer").checked;
+            document.getElementById("customer_selector").style.display = isCustomer ? "block" : "none";
+            document.getElementById("group_selector").style.display = isCustomer ? "none" : "block";
+
+            if (isCustomer) {
+                document.getElementById("id_group").value = "";
+            } else {
+                document.getElementById("id_customer").value = "";
+            }
+        }
+        </script>';
+
+        return $html;
+    }
+
+    /**
+     * Render assignments list
+     */
+    private function renderAssignmentsList()
+    {
+        $assignments = $this->assignmentService->getAllAssignmentsWithDetails();
+
+        $html = '<div class="panel">';
+        $html .= '<div class="panel-heading">';
+        $html .= '<i class="icon-list"></i> ' . $this->l('Current Assignments');
         $html .= '</div>';
 
-        // Lista de asignaciones
         if (empty($assignments)) {
-            $html .= '<div class="alert alert-warning">' . $this->l('No assignments found. Create your first assignment below.') . '</div>';
+            $html .= '<div class="panel-body">';
+            $html .= '<div class="alert alert-warning">';
+            $html .= '<strong>' . $this->l('No assignments yet.') . '</strong> ';
+            $html .= $this->l('Use the form above to create your first assignment.');
+            $html .= '</div>';
+            $html .= '</div>';
         } else {
-            $html .= '<h4>' . $this->l('Current Assignments') . '</h4>';
-            $html .= '<table class="table table-bordered">';
-            $html .= '<thead><tr>';
+            $html .= '<table class="table">';
+            $html .= '<thead>';
+            $html .= '<tr>';
+            $html .= '<th>' . $this->l('ID') . '</th>';
             $html .= '<th>' . $this->l('Employee') . '</th>';
             $html .= '<th>' . $this->l('Type') . '</th>';
-            $html .= '<th>' . $this->l('Target') . '</th>';
-            $html .= '<th>' . $this->l('Date') . '</th>';
-            $html .= '<th>' . $this->l('Actions') . '</th>';
-            $html .= '</tr></thead><tbody>';
+            $html .= '<th>' . $this->l('Assigned To') . '</th>';
+            $html .= '<th>' . $this->l('Date Created') . '</th>';
+            $html .= '<th class="text-right">' . $this->l('Actions') . '</th>';
+            $html .= '</tr>';
+            $html .= '</thead>';
+            $html .= '<tbody>';
 
             foreach ($assignments as $assignment) {
                 $html .= '<tr>';
-                $html .= '<td>' . $assignment['employee']['name'] . '</td>';
-                $html .= '<td><span class="badge badge-' . ($assignment['type'] == 'customer' ? 'success' : 'info') . '">' . ucfirst($assignment['type']) . '</span></td>';
-                $html .= '<td>' . $assignment['target']['name'] . '</td>';
+                $html .= '<td>' . (int)$assignment['id'] . '</td>';
+                $html .= '<td><strong>' . htmlspecialchars($assignment['employee']['name']) . '</strong><br>';
+                $html .= '<small class="text-muted">' . htmlspecialchars($assignment['employee']['email']) . '</small></td>';
+
+                if ($assignment['type'] === 'customer') {
+                    $html .= '<td><span class="badge badge-success">' . $this->l('Customer') . '</span></td>';
+                } else {
+                    $html .= '<td><span class="badge badge-info">' . $this->l('Group') . '</span></td>';
+                }
+
+                $html .= '<td><strong>' . htmlspecialchars($assignment['target']['name']) . '</strong>';
+                if (isset($assignment['target']['email'])) {
+                    $html .= '<br><small class="text-muted">' . htmlspecialchars($assignment['target']['email']) . '</small>';
+                }
+                $html .= '</td>';
+
                 $html .= '<td>' . date('Y-m-d H:i', strtotime($assignment['date_add'])) . '</td>';
-                $html .= '<td><a href="' . $this->context->link->getAdminLink('AdminPersonalSalesmen') . '&deleteAssignment=1&id_assignment=' . $assignment['id'] . '" class="btn btn-danger btn-sm">' . $this->l('Delete') . '</a></td>';
+
+                $html .= '<td class="text-right">';
+                $html .= '<a href="' . self::$currentIndex . '&deleteAssignment=1&id_assignment=' . (int)$assignment['id'] . '&token=' . $this->token . '" ';
+                $html .= 'class="btn btn-danger btn-sm" onclick="return confirm(\'' . $this->l('Are you sure you want to delete this assignment?') . '\');">';
+                $html .= '<i class="icon-trash"></i> ' . $this->l('Delete');
+                $html .= '</a>';
+                $html .= '</td>';
                 $html .= '</tr>';
             }
 
-            $html .= '</tbody></table>';
+            $html .= '</tbody>';
+            $html .= '</table>';
         }
 
-        $html .= '</div></div>';
-
-        // Información adicional
-        $html .= '<div class="panel">';
-        $html .= '<div class="panel-heading"><i class="icon-info"></i> ' . $this->l('How to Create Assignments') . '</div>';
-        $html .= '<div class="panel-body">';
-        $html .= '<p>' . $this->l('This interface is simplified. For a full-featured interface with forms, you can use the modern Symfony controller routes defined in config/routes.yml') . '</p>';
-        $html .= '<p>' . $this->l('To create assignments programmatically or via API, use the AssignmentService class.') . '</p>';
-        $html .= '</div></div>';
+        $html .= '</div>';
 
         return $html;
     }
