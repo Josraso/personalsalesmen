@@ -157,8 +157,14 @@ class AdminPersonalSalesmenController extends ModuleAdminController
      */
     private function renderCreateForm()
     {
-        // Obtener empleados
-        $employees = Employee::getEmployees();
+        // Obtener empleados con email
+        $sql = new DbQuery();
+        $sql->select('id_employee, firstname, lastname, email, active');
+        $sql->from('employee');
+        $sql->where('active = 1');
+        $sql->orderBy('firstname ASC, lastname ASC');
+        $employees = Db::getInstance()->executeS($sql);
+
         $employeeOptions = '<option value="">-- ' . $this->l('Select Employee') . ' --</option>';
         foreach ($employees as $employee) {
             $employeeOptions .= '<option value="' . (int)$employee['id_employee'] . '">'
@@ -167,7 +173,14 @@ class AdminPersonalSalesmenController extends ModuleAdminController
         }
 
         // Obtener clientes
-        $customers = Customer::getCustomers();
+        $sql2 = new DbQuery();
+        $sql2->select('id_customer, firstname, lastname, email, active');
+        $sql2->from('customer');
+        $sql2->where('active = 1 AND deleted = 0');
+        $sql2->orderBy('firstname ASC, lastname ASC');
+        $sql2->limit(500); // Limitar para no cargar miles
+        $customers = Db::getInstance()->executeS($sql2);
+
         $customerOptions = '<option value="">-- ' . $this->l('Select Customer') . ' --</option>';
         foreach ($customers as $customer) {
             $customerOptions .= '<option value="' . (int)$customer['id_customer'] . '">'
