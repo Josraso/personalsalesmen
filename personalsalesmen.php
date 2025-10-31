@@ -27,7 +27,7 @@ class PersonalSalesmen extends Module
     {
         $this->name = 'personalsalesmen';
         $this->tab = 'administration';
-        $this->version = '5.0.0';
+        $this->version = '5.0.1';
         $this->author = 'Community';
         $this->need_instance = 1;
         $this->bootstrap = true;
@@ -37,6 +37,9 @@ class PersonalSalesmen extends Module
         $this->displayName = $this->trans('Personal Salesmen', [], 'Modules.Personalsalesmen.Admin');
         $this->description = $this->trans('Assign customers and groups to specific employees. Employees only see their assigned data.', [], 'Modules.Personalsalesmen.Admin');
         $this->ps_versions_compliancy = ['min' => '8.0.0', 'max' => '9.99.99'];
+
+        // LOG: Verificar que el módulo se carga
+        file_put_contents(__DIR__ . '/module_load.log', date('Y-m-d H:i:s') . " - Constructor ejecutado\n", FILE_APPEND);
 
         // Inicializar solo AssignmentService (AccessControlService se crea cuando se necesita)
         $repository = new AssignmentRepository();
