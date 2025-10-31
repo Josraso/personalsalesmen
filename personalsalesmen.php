@@ -251,6 +251,9 @@ class PersonalSalesmen extends Module
      */
     public function hookActionCustomerGridQueryBuilderModifier(array $params): void
     {
+        // FORZAR LOG para verificar ejecución
+        file_put_contents(__DIR__ . '/hook_test.log', date('Y-m-d H:i:s') . " - Customer hook EJECUTADO - Employee: " . ($this->context->employee->id ?? 'N/A') . "\n", FILE_APPEND);
+
         $this->applyAccessRestriction($params['search_query_builder'], 'c', 'id_customer');
     }
 
@@ -259,13 +262,18 @@ class PersonalSalesmen extends Module
      */
     public function hookActionOrderGridQueryBuilderModifier(array $params): void
     {
+        // FORZAR LOG para verificar ejecución
+        file_put_contents(__DIR__ . '/hook_test.log', date('Y-m-d H:i:s') . " - Order hook EJECUTADO - Employee: " . ($this->context->employee->id ?? 'N/A') . "\n", FILE_APPEND);
+
         $accessControl = $this->getAccessControl();
 
         if ($accessControl->canSeeEverything()) {
+            file_put_contents(__DIR__ . '/hook_test.log', date('Y-m-d H:i:s') . " - canSeeEverything=TRUE, sin filtro\n", FILE_APPEND);
             return;
         }
 
         $allowedIds = $accessControl->getAllowedCustomerIds();
+        file_put_contents(__DIR__ . '/hook_test.log', date('Y-m-d H:i:s') . " - Allowed IDs: " . implode(',', $allowedIds) . "\n", FILE_APPEND);
 
         if (empty($allowedIds)) {
             $params['search_query_builder']->andWhere('1 = 0');
@@ -282,6 +290,9 @@ class PersonalSalesmen extends Module
      */
     public function hookActionAddressGridQueryBuilderModifier(array $params): void
     {
+        // FORZAR LOG para verificar ejecución
+        file_put_contents(__DIR__ . '/hook_test.log', date('Y-m-d H:i:s') . " - Address hook EJECUTADO - Employee: " . ($this->context->employee->id ?? 'N/A') . "\n", FILE_APPEND);
+
         $this->applyAccessRestriction($params['search_query_builder'], 'a', 'id_customer');
     }
 
