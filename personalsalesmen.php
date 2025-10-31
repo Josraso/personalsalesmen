@@ -251,6 +251,9 @@ class PersonalSalesmen extends Module
      */
     public function hookActionCustomerGridQueryBuilderModifier(array $params): void
     {
+        // FORZAR ERROR VISIBLE para saber si el hook se ejecuta
+        die('HOOK CUSTOMER EJECUTADO - Si ves este mensaje, el hook SÍ funciona');
+
         echo "<!-- PSM DEBUG: hookActionCustomerGridQueryBuilderModifier CALLED -->\n";
         $this->applyAccessRestriction($params['search_query_builder'], 'c', 'id_customer');
     }
