@@ -68,26 +68,13 @@ class PersonalSalesmen extends Module
         Configuration::updateValue('PSM_RESTRICTION_ENABLED', 1);
         Configuration::updateValue('PSM_EMAIL_NOTIFICATIONS', 1);
 
-        // Registrar hooks - forma nativa PrestaShop
-        $hooks = [
-            'actionAdminControllerSetMedia',
-            'actionCustomerGridQueryBuilderModifier',
-            'actionOrderGridQueryBuilderModifier',
-            'actionAddressGridQueryBuilderModifier',
-            'actionValidateOrder',
-        ];
-
-        foreach ($hooks as $hookName) {
-            // Desregistrar primero por si había registro corrupto sin posición
-            $this->unregisterHook($hookName);
-
-            // Registrar - PrestaShop asigna posición automáticamente
-            if (!$this->registerHook($hookName)) {
-                return false;
-            }
-        }
-
-        return $this->installTab();
+        // Registrar hooks
+        return $this->registerHook('actionAdminControllerSetMedia')
+            && $this->registerHook('actionCustomerGridQueryBuilderModifier')
+            && $this->registerHook('actionOrderGridQueryBuilderModifier')
+            && $this->registerHook('actionAddressGridQueryBuilderModifier')
+            && $this->registerHook('actionValidateOrder')
+            && $this->installTab();
     }
 
     /**
@@ -264,7 +251,6 @@ class PersonalSalesmen extends Module
      */
     public function hookActionCustomerGridQueryBuilderModifier(array $params): void
     {
-        echo "<!-- PSM DEBUG: hookActionCustomerGridQueryBuilderModifier CALLED -->\n";
         $this->applyAccessRestriction($params['search_query_builder'], 'c', 'id_customer');
     }
 
@@ -273,28 +259,22 @@ class PersonalSalesmen extends Module
      */
     public function hookActionOrderGridQueryBuilderModifier(array $params): void
     {
-        echo "<!-- PSM DEBUG: hookActionOrderGridQueryBuilderModifier CALLED -->\n";
         $accessControl = $this->getAccessControl();
 
         if ($accessControl->canSeeEverything()) {
-            echo "<!-- PSM DEBUG: canSeeEverything=TRUE, NO FILTER -->\n";
             return;
         }
 
         $allowedIds = $accessControl->getAllowedCustomerIds();
-        echo "<!-- PSM DEBUG: Allowed IDs count=" . count($allowedIds) . " -->\n";
 
         if (empty($allowedIds)) {
-            echo "<!-- PSM DEBUG: EMPTY IDs, setting 1=0 -->\n";
             $params['search_query_builder']->andWhere('1 = 0');
             return;
         }
 
-        $filter = 'o.id_customer IN (' . implode(',', array_map('intval', $allowedIds)) . ')';
-        echo "<!-- PSM DEBUG: Applying filter: {$filter} -->\n";
-
         // Usar o.id_customer directamente sin JOIN (evita conflicto de alias)
-        $params['search_query_builder']->andWhere($filter);
+        $params['search_query_builder']
+            ->andWhere('o.id_customer IN (' . implode(',', array_map('intval', $allowedIds)) . ')');
     }
 
     /**
@@ -329,30 +309,20 @@ class PersonalSalesmen extends Module
      */
     private function applyAccessRestriction($queryBuilder, string $alias, string $field): void
     {
-        echo "<!-- PSM DEBUG: applyAccessRestriction for {$alias}.{$field} -->\n";
         $accessControl = $this->getAccessControl();
 
-        $empId = $this->context->employee->id ?? 0;
-        $profId = $this->context->employee->id_profile ?? 0;
-        echo "<!-- PSM DEBUG: Employee ID={$empId}, Profile={$profId} -->\n";
-
         if ($accessControl->canSeeEverything()) {
-            echo "<!-- PSM DEBUG: canSeeEverything=TRUE, NO FILTER -->\n";
             return;
         }
 
         $allowedIds = $accessControl->getAllowedCustomerIds();
-        echo "<!-- PSM DEBUG: Allowed IDs count=" . count($allowedIds) . " IDs:" . implode(',', array_slice($allowedIds, 0, 10)) . " -->\n";
 
         if (empty($allowedIds)) {
-            echo "<!-- PSM DEBUG: EMPTY IDs, setting 1=0 -->\n";
             $queryBuilder->andWhere('1 = 0');
             return;
         }
 
-        $filter = $alias . '.' . $field . ' IN (' . implode(',', array_map('intval', $allowedIds)) . ')';
-        echo "<!-- PSM DEBUG: Applying filter: {$filter} -->\n";
-        $queryBuilder->andWhere($filter);
+        $queryBuilder->andWhere($alias . '.' . $field . ' IN (' . implode(',', array_map('intval', $allowedIds)) . ')');
     }
 
     /**
