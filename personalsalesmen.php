@@ -68,13 +68,85 @@ class PersonalSalesmen extends Module
         Configuration::updateValue('PSM_RESTRICTION_ENABLED', 1);
         Configuration::updateValue('PSM_EMAIL_NOTIFICATIONS', 1);
 
-        // Registrar hooks
-        return $this->registerHook('actionAdminControllerSetMedia')
-            && $this->registerHook('actionCustomerGridQueryBuilderModifier')
-            && $this->registerHook('actionOrderGridQueryBuilderModifier')
-            && $this->registerHook('actionAddressGridQueryBuilderModifier')
-            && $this->registerHook('actionValidateOrder')
-            && $this->installTab();
+        // Registrar hooks Y transplantarlos (asignar posición)
+        $hooks = [
+            'actionAdminControllerSetMedia',
+            'actionCustomerGridQueryBuilderModifier',
+            'actionOrderGridQueryBuilderModifier',
+            'actionAddressGridQueryBuilderModifier',
+            'actionValidateOrder',
+        ];
+
+        foreach ($hooks as $hookName) {
+            if (!$this->registerHook($hookName)) {
+                return false;
+            }
+
+            // CRÍTICO: Transplant para asegurar que tiene posición
+            $this->transplantHookWithPosition($hookName);
+        }
+
+        return $this->installTab();
+    }
+
+    /**
+     * Asegurar que el hook tiene posición asignada
+     */
+    private function transplantHookWithPosition(string $hookName): bool
+    {
+        $hookId = Hook::getIdByName($hookName);
+        if (!$hookId) {
+            return false;
+        }
+
+        // Actualizar posición en hook_module (asegurar que existe)
+        $sql = "UPDATE `" . _DB_PREFIX_ . "hook_module`
+                SET position = 1
+                WHERE id_module = " . (int)$this->id . "
+                AND id_hook = " . (int)$hookId;
+
+        Db::getInstance()->execute($sql);
+
+        return true;
+    }
+
+    /**
+     * Método público para reparar hooks (llamar desde configuración)
+     */
+    public function fixHookPositions(): bool
+    {
+        $hooks = [
+            'actionAdminControllerSetMedia',
+            'actionCustomerGridQueryBuilderModifier',
+            'actionOrderGridQueryBuilderModifier',
+            'actionAddressGridQueryBuilderModifier',
+            'actionValidateOrder',
+        ];
+
+        foreach ($hooks as $hookName) {
+            $hookId = Hook::getIdByName($hookName);
+            if (!$hookId) {
+                continue;
+            }
+
+            // Asegurar que el hook está registrado
+            if (!$this->isRegisteredInHook($hookName)) {
+                $this->registerHook($hookName);
+            }
+
+            // Forzar posición
+            Db::getInstance()->execute("
+                UPDATE `" . _DB_PREFIX_ . "hook_module`
+                SET position = 1
+                WHERE id_module = " . (int)$this->id . "
+                AND id_hook = " . (int)$hookId . "
+            ");
+        }
+
+        // Limpiar caché
+        Tools::clearCache();
+
+        return true;
     }
 
     /**
@@ -134,12 +206,21 @@ class PersonalSalesmen extends Module
     {
         $output = '';
 
-        // Procesar formulario
+        // Procesar formulario de configuración
         if (Tools::isSubmit('submitPersonalSalesmenConfig')) {
             Configuration::updateValue('PSM_RESTRICTION_ENABLED', (int)Tools::getValue('PSM_RESTRICTION_ENABLED'));
             Configuration::updateValue('PSM_EMAIL_NOTIFICATIONS', (int)Tools::getValue('PSM_EMAIL_NOTIFICATIONS'));
 
             $output .= $this->displayConfirmation($this->trans('Settings updated successfully.', [], 'Modules.Personalsalesmen.Admin'));
+        }
+
+        // Procesar reparación de hooks
+        if (Tools::isSubmit('submitFixHooks')) {
+            if ($this->fixHookPositions()) {
+                $output .= $this->displayConfirmation($this->l('Hook positions updated successfully. Cache cleared.'));
+            } else {
+                $output .= $this->displayError($this->l('Error updating hook positions.'));
+            }
         }
 
         // Banner informativo
@@ -149,7 +230,31 @@ class PersonalSalesmen extends Module
             <p>' . $this->l('This page is only for general module configuration.') . '</p>
         </div>';
 
-        return $output . $this->renderConfigForm();
+        return $output . $this->renderFixHooksButton() . $this->renderConfigForm();
+    }
+
+    /**
+     * Botón para reparar hooks
+     */
+    private function renderFixHooksButton(): string
+    {
+        $currentIndex = AdminController::$currentIndex . '&configure=' . $this->name;
+        $token = Tools::getAdminTokenLite('AdminModules');
+
+        return '<div class="panel">
+            <div class="panel-heading">
+                <i class="icon-wrench"></i> ' . $this->l('Hook Diagnostics & Repair') . '
+            </div>
+            <div class="panel-body">
+                <p>' . $this->l('If restrictions are not working, hooks may not have positions assigned.') . '</p>
+                <p>' . $this->l('Click the button below to force hook position registration.') . '</p>
+                <form method="post" action="' . $currentIndex . '&token=' . $token . '">
+                    <button type="submit" name="submitFixHooks" class="btn btn-warning">
+                        <i class="icon-refresh"></i> ' . $this->l('Fix Hook Positions') . '
+                    </button>
+                </form>
+            </div>
+        </div>';
     }
 
     /**
@@ -251,9 +356,6 @@ class PersonalSalesmen extends Module
      */
     public function hookActionCustomerGridQueryBuilderModifier(array $params): void
     {
-        // FORZAR ERROR VISIBLE para saber si el hook se ejecuta
-        die('HOOK CUSTOMER EJECUTADO - Si ves este mensaje, el hook SÍ funciona');
-
         echo "<!-- PSM DEBUG: hookActionCustomerGridQueryBuilderModifier CALLED -->\n";
         $this->applyAccessRestriction($params['search_query_builder'], 'c', 'id_customer');
     }
