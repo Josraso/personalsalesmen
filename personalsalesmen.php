@@ -254,8 +254,13 @@ class PersonalSalesmen extends Module
      */
     public function hookActionCustomerGridQueryBuilderModifier(array $params): void
     {
-        // FORZAR LOG para verificar ejecución
-        file_put_contents(__DIR__ . '/hook_test.log', date('Y-m-d H:i:s') . " - Customer hook EJECUTADO - Employee: " . ($this->context->employee->id ?? 'N/A') . "\n", FILE_APPEND);
+        // LOGGING DETALLADO para diagnóstico
+        $ctx = Context::getContext();
+        $empId = $ctx->employee->id ?? 'NULL';
+        $empProfile = $ctx->employee->id_profile ?? 'NULL';
+
+        file_put_contents(__DIR__ . '/hook_test.log', date('Y-m-d H:i:s') . " - Customer hook EJECUTADO\n", FILE_APPEND);
+        file_put_contents(__DIR__ . '/hook_test.log', "  Employee ID: {$empId} | Profile ID: {$empProfile}\n", FILE_APPEND);
 
         $this->applyAccessRestriction($params['search_query_builder'], 'c', 'id_customer');
     }
@@ -323,20 +328,30 @@ class PersonalSalesmen extends Module
      */
     private function applyAccessRestriction($queryBuilder, string $alias, string $field): void
     {
+        file_put_contents(__DIR__ . '/hook_test.log', "  applyAccessRestriction called for {$alias}.{$field}\n", FILE_APPEND);
+
         $accessControl = $this->getAccessControl();
 
+        $empInfo = $accessControl->getCurrentEmployeeInfo();
+        file_put_contents(__DIR__ . '/hook_test.log', "  Employee Info: " . json_encode($empInfo) . "\n", FILE_APPEND);
+
         if ($accessControl->canSeeEverything()) {
+            file_put_contents(__DIR__ . '/hook_test.log', "  canSeeEverything=TRUE, NO filter applied\n", FILE_APPEND);
             return;
         }
 
         $allowedIds = $accessControl->getAllowedCustomerIds();
+        file_put_contents(__DIR__ . '/hook_test.log', "  Allowed IDs count: " . count($allowedIds) . "\n", FILE_APPEND);
 
         if (empty($allowedIds)) {
+            file_put_contents(__DIR__ . '/hook_test.log', "  NO allowed IDs, applying 1=0 filter\n", FILE_APPEND);
             $queryBuilder->andWhere('1 = 0');
             return;
         }
 
-        $queryBuilder->andWhere($alias . '.' . $field . ' IN (' . implode(',', array_map('intval', $allowedIds)) . ')');
+        $filter = $alias . '.' . $field . ' IN (' . implode(',', array_map('intval', $allowedIds)) . ')';
+        file_put_contents(__DIR__ . '/hook_test.log', "  Applying filter: {$filter}\n", FILE_APPEND);
+        $queryBuilder->andWhere($filter);
     }
 
     /**
